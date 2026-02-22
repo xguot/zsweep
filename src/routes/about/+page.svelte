@@ -125,7 +125,8 @@
 	onMount(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
-				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+				currentUser =
+					session.user.user_metadata.full_name || session.user.email?.split('@')[0];
 			}
 		});
 
@@ -184,7 +185,8 @@
 
 			<!-- Total Time Sweeping -->
 			<div class="flex flex-col items-center gap-1">
-				<span class="mb-2 text-[10px] font-bold uppercase tracking-widest text-sub opacity-50"
+				<span
+					class="mb-2 text-[10px] font-bold uppercase tracking-widest text-sub opacity-50"
 					>total time sweeping</span
 				>
 				<div class="flex flex-col items-center leading-none">
@@ -210,10 +212,10 @@
 		<!-- INTRODUCTION -->
 		<div class="space-y-20 text-sm leading-relaxed text-sub">
 			<p class="mb-16 max-w-2xl text-base text-sub">
-				<span class="font-bold text-main">zsweep</span> is a minimalist, keyboard-driven Minesweeper focused
-				on speed and consistency. Play using Vim-style controls, track your performance over time, and
-				see your progress visualized after each session. Clear boards efficiently, reduce mistakes, and
-				improve with practice.
+				<span class="font-bold text-main">zsweep</span> is a minimalist, keyboard-driven Minesweeper
+				focused on speed and consistency. Play using Vim-style controls, track your performance
+				over time, and see your progress visualized after each session. Clear boards efficiently,
+				reduce mistakes, and improve with practice.
 			</p>
 
 			<!-- PHILOSOPHY SECTION -->
@@ -227,10 +229,10 @@
 					Traditional Minesweeper clones rely heavily on mouse inputs, breaking the <span
 						class="font-bold text-text">flow state</span
 					>.
-					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as a
-					keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`, `b`, `{'{'}`,
-					`{'}'}`) and instant feedback, we aim to create the most efficient and satisfying sweeping
-					engine for developers.
+					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as
+					a keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`,
+					`b`, `{'{'}`, `{'}'}`) and instant feedback, we aim to create the most efficient
+					and satisfying sweeping engine for developers.
 				</p>
 			</section>
 
@@ -252,7 +254,8 @@
 						class="flex flex-col gap-2 rounded-lg border border-sub/10 bg-sub/5 p-4 transition-colors hover:border-main/30"
 					>
 						<span class="font-bold text-text">TypeScript</span>
-						<span class="text-xs">Strict typing for game logic and state machines.</span>
+						<span class="text-xs">Strict typing for game logic and state machines.</span
+						>
 					</div>
 					<div
 						class="flex flex-col gap-2 rounded-lg border border-sub/10 bg-sub/5 p-4 transition-colors hover:border-main/30"
@@ -305,91 +308,90 @@
 			</section>
 
 			<!-- OPEN SOURCE & CONTRIBUTORS -->
-			<section class="border-t border-sub/10 pt-16">
-				<h2
-					class="mb-6 flex items-center gap-3 text-lg font-black uppercase tracking-tight text-text"
-				>
-					<GitPullRequest size={20} class="text-main" /> Open Source
+			<section class="mb-16">
+				<h2 class="mb-4 flex items-center gap-2 text-lg font-bold uppercase text-text">
+					<svg
+						class="h-5 w-5 text-main"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 4v16m8-8H4"
+						/>
+					</svg>
+					Contributors
 				</h2>
-				<div class="mb-8 flex flex-col gap-4 text-base">
-					<p>
-						<strong class="text-main">zsweep</strong> is fully open source. We are actively looking
-						for contributors to help with
-						<strong class="text-text">Mobile Support</strong> (Touch Events) and the
-						<strong class="text-text">Chording Animation</strong> engine.
-					</p>
 
-					<!-- Contributors Grid (dynamic from GitHub API) -->
-					<section class="mb-16">
-						<h2 class="mb-4 flex items-center gap-2 text-lg font-bold uppercase text-text">
-							<svg
-								class="h-5 w-5 text-main"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 4v16m8-8H4"
-								/>
-							</svg>
-							Contributors
-						</h2>
+				<p class="mb-6 text-center text-sm text-sub">
+					Every contribution, from code to ideas, helps make <span
+						class="font-bold text-main">zsweep</span
+					> better.
+				</p>
 
-						<p class="mb-6 text-center text-sm text-sub">
-							Every contribution, from code to ideas, helps make <span class="font-bold text-main"
-								>zsweep</span
-							> better.
-						</p>
-
-						<div
-							class="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+				<div
+					class="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+				>
+					{#each contributors as c (c.login)}
+						<a
+							href={c.html_url}
+							target="_blank"
+							class="flex flex-col items-center text-xs text-sub hover:text-main"
 						>
-							{#each contributors as c (c.login)}
-								<a
-									href={c.html_url}
-									target="_blank"
-									class="flex flex-col items-center text-xs text-sub hover:text-main"
-								>
-									<img
-										src={c.avatar_url}
-										alt={c.login}
-										class="h-10 w-10 rounded-full border border-sub/20 object-cover"
-									/>
-									<span class="max-w-[60px] truncate text-center">{c.login}</span>
-								</a>
-							{/each}
+							<img
+								src={c.avatar_url}
+								alt={c.login}
+								class="h-10 w-10 rounded-full border border-sub/20 object-cover"
+							/>
+							<span class="max-w-[60px] truncate text-center">{c.login}</span>
+						</a>
+					{/each}
+
+					<div class="flex flex-col items-center text-xs text-sub">
+						<div
+							class="flex h-10 w-10 items-center justify-center rounded-full border border-main/30 bg-main/5 text-[10px] font-bold text-main"
+							title="Logo Designer"
+						>
+							AY
 						</div>
-					</section>
+						<span class="max-w-[60px] truncate text-center">Ahmed Yusuf</span>
+						<span class="text-[8px] uppercase tracking-tighter opacity-50">Logo</span>
+					</div>
 				</div>
 
-				<!-- GitHub Links -->
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					<a
-						href="https://github.com/oug-t/zsweep"
-						target="_blank"
-						class="group flex items-center justify-center gap-3 rounded-lg border border-sub/20 bg-sub/5 px-6 py-4 text-text transition-all hover:border-main hover:bg-sub/10"
-					>
-						<Github size={20} class="transition-transform group-hover:scale-110" />
-						<div class="flex flex-col items-start">
-							<span class="font-bold">GitHub Repository</span>
-							<span class="text-xs text-sub group-hover:text-main">Star, Fork, & Contribute</span>
-						</div>
-					</a>
-					<a
-						href="https://github.com/oug-t/zsweep/issues"
-						target="_blank"
-						class="group flex items-center justify-center gap-3 rounded-lg border border-sub/20 bg-sub/5 px-6 py-4 text-text transition-all hover:border-main hover:bg-sub/10"
-					>
-						<Code2 size={20} class="transition-transform group-hover:scale-110" />
-						<div class="flex flex-col items-start">
-							<span class="font-bold">View Roadmap</span>
-							<span class="text-xs text-sub group-hover:text-main">Help us build v1.1</span>
-						</div>
-					</a>
+				<div class="mt-20 border-t border-sub/10 pt-12">
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<a
+							href="https://github.com/oug-t/zsweep"
+							target="_blank"
+							class="group flex items-center justify-center gap-3 rounded-lg border border-sub/20 bg-sub/5 px-6 py-4 text-text transition-all hover:border-main hover:bg-sub/10"
+						>
+							<Github size={20} class="transition-transform group-hover:scale-110" />
+							<div class="flex flex-col items-start">
+								<span class="font-bold">GitHub Repository</span>
+								<span class="text-xs text-sub group-hover:text-main"
+									>Star, Fork, & Contribute</span
+								>
+							</div>
+						</a>
+						<a
+							href="https://github.com/oug-t/zsweep/issues"
+							target="_blank"
+							class="group flex items-center justify-center gap-3 rounded-lg border border-sub/20 bg-sub/5 px-6 py-4 text-text transition-all hover:border-main hover:bg-sub/10"
+						>
+							<Code2 size={20} class="transition-transform group-hover:scale-110" />
+							<div class="flex flex-col items-start">
+								<span class="font-bold">View Roadmap</span>
+								<span class="text-xs text-sub group-hover:text-main"
+									>Help us build v1.1</span
+								>
+							</div>
+						</a>
+					</div>
 				</div>
 			</section>
 		</div>

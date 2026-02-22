@@ -13,8 +13,8 @@
 		Flame,
 		LogOut
 	} from 'lucide-svelte';
-	import { THEMES, type Theme, applyThemeToRoot } from '$lib/themes';
-	import { currentTheme } from '$lib/themeStore';
+	import { THEMES, type Theme } from '$lib/themes';
+	import { currentTheme, applyThemeToRoot } from '$lib/themeStore';
 	import { mineIcon } from '$lib/mineIconStore';
 	import { zenMode } from '$lib/zenStore';
 	import { lineNumbers, type LineNumberMode } from '$lib/lineNumberStore';
@@ -24,6 +24,9 @@
 
 	let paletteView: 'root' | 'themes' | 'linenumbers' | 'mineicons' = 'root';
 	let originalTheme: Theme | null = null;
+	let searchQuery = '';
+	let searchInputEl: HTMLInputElement;
+	let selectedIndex = 0;
 
 	const LINE_NUMBER_OPTIONS: { id: LineNumberMode; label: string }[] = [
 		{ id: 'off', label: 'Off' },
@@ -38,10 +41,6 @@
 		{ id: 'radiation', label: 'Radiation', icon: Radiation },
 		{ id: 'flame', label: 'Flame', icon: Flame }
 	];
-
-	let searchQuery = '';
-	let searchInputEl: HTMLInputElement;
-	let selectedIndex = 0;
 
 	$: if (show) {
 		paletteView = 'root';
@@ -142,12 +141,10 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (!show) return;
 
-		// Prevent browser defaults and stop propagation to layout
 		if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.key)) {
 			e.stopPropagation();
 		}
 
-		// Handle Close / Back Logic
 		if (e.key === 'Escape' || (e.ctrlKey && (e.key === '[' || e.key === 'c'))) {
 			e.preventDefault();
 			if (paletteView !== 'root') {
@@ -164,19 +161,14 @@
 			return;
 		}
 
-		// Handle Navigation
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
 			selectedIndex = (selectedIndex + 1) % currentItems.length;
-			if (paletteView === 'themes' && currentItems[selectedIndex]) {
-				applyThemeToRoot(currentItems[selectedIndex] as Theme);
-			}
+			if (paletteView === 'themes') applyThemeToRoot(currentItems[selectedIndex] as Theme);
 		} else if (e.key === 'ArrowUp') {
 			e.preventDefault();
 			selectedIndex = (selectedIndex - 1 + currentItems.length) % currentItems.length;
-			if (paletteView === 'themes' && currentItems[selectedIndex]) {
-				applyThemeToRoot(currentItems[selectedIndex] as Theme);
-			}
+			if (paletteView === 'themes') applyThemeToRoot(currentItems[selectedIndex] as Theme);
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
 			if (paletteView === 'root' && (searchQuery === ':q' || searchQuery === ':wq')) {
@@ -193,7 +185,8 @@
 		if (paletteView === 'root') {
 			item.action();
 		} else if (paletteView === 'themes') {
-			originalTheme = null; // Don't restore on close since we're selecting
+			originalTheme = null;
+			applyThemeToRoot(item as Theme);
 			$currentTheme = item;
 			close();
 		} else if (paletteView === 'linenumbers') {
@@ -212,16 +205,13 @@
 		}
 		show = false;
 	}
-
-	function previewTheme(theme: Theme) {
-		applyThemeToRoot(theme);
-	}
 </script>
 
 {#if show}
 	<div
 		role="dialog"
 		aria-modal="true"
+		tabindex="-1"
 		class="animate-in fade-in fixed inset-0 z-[100] flex items-start justify-center bg-black/60 backdrop-blur-sm duration-150"
 		on:mousedown|self={close}
 		on:keydown={handleKeydown}
@@ -236,12 +226,8 @@
 					bind:value={searchQuery}
 					on:input={() => {
 						selectedIndex = 0;
-						if (paletteView === 'themes') {
-							tick().then(() => {
-								if (filteredThemes[0]) {
-									previewTheme(filteredThemes[0]);
-								}
-							});
+						if (paletteView === 'themes' && filteredThemes[0]) {
+							applyThemeToRoot(filteredThemes[0]);
 						}
 					}}
 					type="text"
@@ -267,9 +253,7 @@
 							on:click={() => executeSelection(item)}
 							on:mouseenter={() => {
 								selectedIndex = i;
-								if (paletteView === 'themes') {
-									previewTheme(item as Theme);
-								}
+								if (paletteView === 'themes') applyThemeToRoot(item as Theme);
 							}}
 						>
 							{#if paletteView === 'root'}

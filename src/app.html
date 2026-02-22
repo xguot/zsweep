@@ -1,44 +1,39 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<title>Zsweep</title>
-		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
-		<link rel="icon" type="image/png" sizes="192x192" href="%sveltekit.assets%/favicon.png" />
-		<link rel="apple-touch-icon" href="%sveltekit.assets%/favicon.png" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>Zsweep</title>
+        
+        <link id="favicon" rel="icon" type="image/svg+xml" href="/favicon.svg">
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-		<link
-			href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
-			rel="stylesheet"
-		/>
+        %sveltekit.head%
 
-		%sveltekit.head%
-
-		<script>
-			try {
-				const fallback = {
-					bg: '#0b0f14',
-					main: '#b48ead',
-					sub: '#88c0d0',
-					text: '#eceff4',
-					error: '#bf616a'
-				};
-				const vars = JSON.parse(localStorage.getItem('zsweep_theme_vars') || 'null') || fallback;
-
-				const root = document.documentElement;
-				root.style.setProperty('--bg', vars.bg);
-				root.style.setProperty('--main', vars.main);
-				root.style.setProperty('--sub', vars.sub);
-				root.style.setProperty('--text', vars.text);
-				root.style.setProperty('--error', vars.error);
-			} catch (e) {}
-		</script>
-	</head>
-
-	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">%sveltekit.body%</div>
-	</body>
+        <script>
+            try {
+                const fallback = {
+                    bg: '25 25 25',
+                    main: '216 180 254',
+                    sub: '161 161 170',
+                    text: '228 228 231',
+                    error: '239 68 68'
+                };
+                const vars = JSON.parse(localStorage.getItem('zsweep_theme_vars')) || fallback;
+                const root = document.documentElement;
+                
+                root.style.setProperty('--bg', vars.bg);
+                root.style.setProperty('--main', vars.main);
+                root.style.setProperty('--sub', vars.sub);
+                root.style.setProperty('--text', vars.text);
+                root.style.setProperty('--error', vars.error);
+            } catch (e) {}
+        </script>
+    </head>
+    <body data-sveltekit-preload-data="hover">
+        <div style="display: contents">%sveltekit.body%</div>
+    </body>
 </html>
