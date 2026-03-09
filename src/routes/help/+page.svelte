@@ -2,6 +2,71 @@
 	import { Keyboard, Hash, Gamepad2, Zap, BookOpen } from 'lucide-svelte';
 	import PatternDemo from '$lib/components/docs/PatternDemo.svelte';
 
+	function cell(r: number, c: number, overrides = {}): any {
+		return { row: r, col: c, isMine: false, isOpen: false, isFlagged: false, neighborCount: 0, ...overrides };
+	}
+
+	const mine = { isMine: true, isFlagged: true };
+	const open = (n: number) => ({ isOpen: true, neighborCount: n });
+
+	const patterns = {
+		'1-2-1': {
+			cols: 5,
+			grid: [
+				[cell(0, 0, mine), cell(0, 1), cell(0, 2, mine), cell(0, 3), cell(0, 4)],
+				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(1)), cell(1, 3, open(1)), cell(1, 4, open(0))]
+			]
+		},
+		'1-2-2-1': {
+			cols: 5,
+			grid: [
+				[cell(0, 0), cell(0, 1, mine), cell(0, 2, mine), cell(0, 3), cell(0, 4)],
+				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(2)), cell(1, 3, open(1)), cell(1, 4, open(0))]
+			]
+		},
+		'wall-3': {
+			cols: 3,
+			grid: [
+				[cell(0, 0, mine), cell(0, 1, mine), cell(0, 2, mine)],
+				[cell(1, 0, open(2)), cell(1, 1, open(3)), cell(1, 2, open(2))]
+			]
+		},
+		'2-3-2': {
+			cols: 5,
+			grid: [
+				[cell(0, 0, mine), cell(0, 1), cell(0, 2, mine), cell(0, 3), cell(0, 4, mine)],
+				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(3)), cell(1, 3, open(2)), cell(1, 4, open(1))]
+			]
+		},
+		'corner-l': {
+			cols: 4,
+			grid: [
+				[cell(0, 0, mine), cell(0, 1), cell(0, 2), cell(0, 3)],
+				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(1)), cell(1, 3, open(0))],
+				[cell(2, 0, open(0)), cell(2, 1, open(1)), cell(2, 2, mine), cell(2, 3)],
+				[cell(3, 0, open(0)), cell(3, 1, open(1)), cell(3, 2, open(1)), cell(3, 3, open(1))]
+			]
+		},
+		't-junction': {
+			cols: 5,
+			grid: [
+				[cell(0, 0, mine), cell(0, 1), cell(0, 2), cell(0, 3), cell(0, 4, mine)],
+				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(1)), cell(1, 3, open(2)), cell(1, 4, open(1))],
+				[cell(2, 0, open(0)), cell(2, 1, open(1)), cell(2, 2, mine), cell(2, 3, open(1)), cell(2, 4, open(0))],
+				[cell(3, 0, open(0)), cell(3, 1, open(1)), cell(3, 2, open(1)), cell(3, 3, open(1)), cell(3, 4, open(0))]
+			]
+		},
+		'1-2-1-stair': {
+			cols: 5,
+			grid: [
+				[cell(0, 0, mine), cell(0, 1), cell(0, 2), cell(0, 3), cell(0, 4)],
+				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2), cell(1, 3), cell(1, 4)],
+				[cell(2, 0, open(0)), cell(2, 1, open(1)), cell(2, 2, open(2)), cell(2, 3), cell(2, 4)],
+				[cell(3, 0, open(0)), cell(3, 1, open(0)), cell(3, 2, open(1)), cell(3, 3, mine), cell(3, 4)]
+			]
+		}
+	};
+
 	const shortcuts = [
 		{ keys: ['Tab'], desc: 'Restart / Back to home' },
 		{ keys: ['Enter / i'], desc: 'Reveal a cell' },
@@ -189,13 +254,15 @@
 				<h3 class="mt-4 text-xl font-semibold">Basic Patterns</h3>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<PatternDemo
-						pattern="1-2-1"
+						grid={patterns['1-2-1'].grid}
+						cols={patterns['1-2-1'].cols}
 						title="The 1-2-1 Pattern"
 						desc="When you see a 1-2-1 sequence against a straight wall, the cells touching the 1s are always mines."
 					/>
 
 					<PatternDemo
-						pattern="1-2-2-1"
+						grid={patterns['1-2-2-1'].grid}
+						cols={patterns['1-2-2-1'].cols}
 						title="The 1-2-2-1 Pattern"
 						desc="A 1-2-2-1 sequence indicates that the two mines are located between the 2s."
 					/>
@@ -204,12 +271,14 @@
 				<h3 class="mt-6 text-xl font-semibold">Intermediate Patterns</h3>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<PatternDemo
-						pattern="wall-3"
+						grid={patterns['wall-3'].grid}
+						cols={patterns['wall-3'].cols}
 						title="The Wall of 3s"
 						desc="If a 3 is touching exactly 3 hidden squares (flagged or not), all of them must be mines."
 					/>
 					<PatternDemo
-						pattern="2-3-2"
+						grid={patterns['2-3-2'].grid}
+						cols={patterns['2-3-2'].cols}
 						title="The 2-3-2 Pattern"
 						desc="The 3 touches exactly 3 hidden squares. Mines can be deduced from surrounding numbers."
 					/>
@@ -218,19 +287,22 @@
 				<h3 class="mt-6 text-xl font-semibold">Advanced Patterns</h3>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<PatternDemo
-						pattern="corner-l"
+						grid={patterns['corner-l'].grid}
+						cols={patterns['corner-l'].cols}
 						title="Corner L Pattern"
 						desc="Numbers forming an L in the corner often indicate mines along the edges and at the corner itself."
 					/>
 
 					<PatternDemo
-						pattern="t-junction"
+						grid={patterns['t-junction'].grid}
+						cols={patterns['t-junction'].cols}
 						title="T-Junction Pattern"
 						desc="A T-shaped number formation usually allows you to deduce mine locations at the ends of the top bar and base of the T."
 					/>
 
 					<PatternDemo
-						pattern="1-2-1-stair"
+						grid={patterns['1-2-1-stair'].grid}
+						cols={patterns['1-2-1-stair'].cols}
 						title="1-2-1 Staircase"
 						desc="A repeating 1-2-1 sequence along a diagonal or edge indicates a predictable arrangement of mines."
 					/>
