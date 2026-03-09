@@ -90,10 +90,15 @@
 					</div>
 				{:else}
 					<div class="flex flex-col gap-1">
-						<label class="text-[10px] font-bold uppercase tracking-widest text-sub"
-							>Time Limit (Seconds)</label
+						<label
+							for="time-limit"
+							class="text-[10px] font-bold uppercase tracking-widest text-sub"
 						>
+							Time Limit (Seconds)
+						</label>
+
 						<input
+							id="time-limit"
 							type="number"
 							bind:value={config.time}
 							min="10"

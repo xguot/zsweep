@@ -13,10 +13,8 @@
 	export let accuracy = 0;
 	export let sizeLabel = '';
 	export let gridsSolved = 0;
-	export let gridsPlayed = 0;
 	export let mode: 'standard' | 'time' = 'standard';
 	export let cells = 0;
-	export let totalGlobalSeconds = 0;
 	export let restart: () => void;
 
 	let chartCanvas: HTMLCanvasElement;
