@@ -83,10 +83,18 @@ To get a local copy up and running for development or contribution, follow these
 
 ### Prerequisites
 
-npm
+- npm
 
 ```sh
   npm install npm@latest -g
+```
+
+- Docker Desktop (run Supabase locally)
+
+- Supbase CLI
+
+```bash
+brew install supabase/tap/supabase
 ```
 
 ### Installation
@@ -103,15 +111,22 @@ git clone https://github.com/oug-t/zsweep
 npm install
 ```
 
-3. Setup Environment Rename .env.example to .env.
+3. Local Database Setup
 
 ```Bash
-# If you don't have Supabase keys, the game will still run, but scores won't save.
+supabase start      # Starts local Docker containers
+supabase db reset   # Applies migrations and seeds dummy data
 ```
 
-4. Run the server
+4. Environment Setup
 
 ```Bash
+cp .env.example .env
+```
+
+5. Run the server
+
+```bash
 npm run dev
 ```
 
