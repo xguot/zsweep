@@ -102,7 +102,7 @@ brew install supabase/tap/supabase
 1. Clone the repo
 
 ```Bash
-git clone https://github.com/oug-t/zsweep
+git clone https://github.com/xguot/zsweep
 ```
 
 2. Install packages
@@ -191,7 +191,7 @@ See `LICENSE` for more information.
 
 Tommy Guo - tommyguo024@outlook.com
 
-Project Link: https://github.com/oug-t/zsweep
+Project Link: https://github.com/xguot/zsweep
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -207,11 +207,11 @@ Project Link: https://github.com/oug-t/zsweep
 
 ## Star History
 
-<a href="https://star-history.com/#oug-t/zsweep&Date">
+<a href="https://star-history.com/#xguot/zsweep&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=oug-t/zsweep&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=oug-t/zsweep&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=oug-t/zsweep&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xguot/zsweep&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xguot/zsweep&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xguot/zsweep&type=Date" />
  </picture>
 </a>
 
@@ -219,16 +219,16 @@ Project Link: https://github.com/oug-t/zsweep
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/oug-t/zsweep.svg?style=flat
-[contributors-url]: https://github.com/oug-t/zsweep/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/oug-t/zsweep.svg?style=flat
-[forks-url]: https://github.com/oug-t/zsweep/network/members
-[stars-shield]: https://img.shields.io/github/stars/oug-t/zsweep.svg?style=flat
-[stars-url]: https://github.com/oug-t/zsweep/stargazers
-[issues-shield]: https://img.shields.io/github/issues/oug-t/zsweep.svg?style=flat
-[issues-url]: https://github.com/oug-t/zsweep/issues
-[license-shield]: https://img.shields.io/github/license/oug-t/zsweep.svg?style=flat
-[license-url]: https://github.com/oug-t/zsweep/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/xguot/zsweep.svg?style=flat
+[contributors-url]: https://github.com/xguot/zsweep/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/xguot/zsweep.svg?style=flat
+[forks-url]: https://github.com/xguot/zsweep/network/members
+[stars-shield]: https://img.shields.io/github/stars/xguot/zsweep.svg?style=flat
+[stars-url]: https://github.com/xguot/zsweep/stargazers
+[issues-shield]: https://img.shields.io/github/issues/xguot/zsweep.svg?style=flat
+[issues-url]: https://github.com/xguot/zsweep/issues
+[license-shield]: https://img.shields.io/github/license/xguot/zsweep.svg?style=flat
+[license-url]: https://github.com/xguot/zsweep/blob/main/LICENSE
 
 <!-- Badges -->
 
