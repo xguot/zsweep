@@ -778,7 +778,7 @@
 			</a>
 
 			<a
-				href="https://github.com/oug-t/zsweep"
+				href="https://github.com/xguot/zsweep"
 				target="_blank"
 				rel="noreferrer"
 				class="flex items-center gap-2 transition-colors hover:text-text"
@@ -798,11 +798,11 @@
 			</a>
 		</div>
 
-		<div class="flex items-center gap-2 opacity-40">
-			<Code size={12} />
-			<span>with</span>
-			<Heart size={12} class="text-error" />
-			<span>by oug-t</span>
-		</div>
+        <div class="flex items-center gap-2 opacity-40">
+            <Code size={12} />
+            <span>develop with</span>
+            <Coffee size={12} />
+            <span>by xguot</span>
+        </div>
 	</footer>
 </div>

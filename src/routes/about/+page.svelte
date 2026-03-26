@@ -156,7 +156,7 @@
 			const headers: Record<string, string> = {};
 			if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
 
-			const res = await fetch('https://api.github.com/repos/oug-t/zsweep/contributors', {
+			const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
 				headers
 			});
 			if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
@@ -366,7 +366,7 @@
 				<div class="mt-20 border-t border-sub/10 pt-12">
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<a
-							href="https://github.com/oug-t/zsweep"
+							href="https://github.com/xguot/zsweep"
 							target="_blank"
 							class="group flex items-center justify-center gap-3 rounded-lg border border-sub/20 bg-sub/5 px-6 py-4 text-text transition-all hover:border-main hover:bg-sub/10"
 						>
@@ -379,7 +379,7 @@
 							</div>
 						</a>
 						<a
-							href="https://github.com/oug-t/zsweep/issues"
+							href="https://github.com/xguot/zsweep/issues"
 							target="_blank"
 							class="group flex items-center justify-center gap-3 rounded-lg border border-sub/20 bg-sub/5 px-6 py-4 text-text transition-all hover:border-main hover:bg-sub/10"
 						>
