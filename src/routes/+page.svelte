@@ -9,8 +9,7 @@
 		Mail,
 		Github,
 		Twitter,
-		Code,
-		Heart
+        Coffee
 	} from 'lucide-svelte';
 	import {
 		createGrid,
@@ -799,8 +798,7 @@
 		</div>
 
         <div class="flex items-center gap-2 opacity-40">
-            <Code size={12} />
-            <span>develop with</span>
+            <span>Coded with</span>
             <Coffee size={12} />
             <span>by xguot</span>
         </div>
