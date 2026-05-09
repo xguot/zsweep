@@ -30,11 +30,11 @@
 		return isNaN(n) ? 0 : n;
 	};
 
-	let ui = {
+	let ui = $state({
 		loading: true
-	};
+	});
 
-	let dataState = {
+	let dataState = $state({
 		profile: null as Profile | null,
 		history: [] as GameResult[],
 		currentUser: null as string | null,
@@ -47,15 +47,15 @@
 		}[],
 		bestMinesPerMin: {} as Record<string, { value: number; date: string }>,
 		heatmapData: [] as { date: string; count: number; intensity: number }[]
-	};
+	});
 
-	let stats = {
+	let stats = $state({
 		started: 0,
 		completed: 0,
 		timeSweeping: '00:00:00',
 		totalMinesSwept: 0,
 		completionRate: 0
-	};
+	});
 
 	function calculateStats(data: GameResult[]) {
 		const newStats = {

@@ -32,7 +32,11 @@
 	import { lineNumbers } from '$lib/lineNumberStore';
 
 	import type { PageData } from './$types';
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const GAME_CONFIG = {
 		gridSizes: [
@@ -43,7 +47,7 @@
 		timeLimits: [15, 30, 60]
 	};
 
-	let game = {
+	let game = $state({
 		mode: 'standard' as 'time' | 'standard',
 		size: GAME_CONFIG.gridSizes[0],
 		timeLimit: 15,
@@ -53,9 +57,9 @@
 		timer: 0,
 		timerInterval: undefined as ReturnType<typeof setInterval> | undefined,
 		isFirstClick: true
-	};
+	});
 
-	let input = {
+	let input = $state({
 		cursor: { r: 0, c: 0 },
 		buffer: '',
 		lastKey: '',
@@ -64,22 +68,22 @@
 		vimMode: false,
 		operator: null as 'SMART' | 'FLAG' | 'REVEAL' | null,
 		operatorCount: 1
-	};
+	});
 
-	let search = {
+	let search = $state({
 		active: false,
 		term: '',
 		matches: [] as { r: number; c: number }[],
 		matchIndex: -1
-	};
+	});
 
-	let ui = {
+	let ui = $state({
 		showCustomModal: false
-	};
+	});
 
-	let showTutorial = false;
+	let showTutorial = $state(false);
 
-	let stats = {
+	let stats = $state({
 		clicks: 0,
 		clicksThisSecond: 0,
 		history: [] as number[],
@@ -90,14 +94,14 @@
 		sessionTotalMines: 0,
 		sessionErrors: 0,
 		finalAccuracy: 0
-	};
+	});
 
 	let currentUser: string | null = null;
 
-	let windowWidth = 0;
-	let windowHeight = 0;
+	let windowWidth = $state(0);
+	let windowHeight = $state(0);
 
-	$: cellSize = (() => {
+	let cellSize = $derived((() => {
 		if (!windowWidth) return 32;
 		const cols = game.size.cols;
 		const rows = game.size.rows;
@@ -109,7 +113,7 @@
 		const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
 		const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
 		return Math.max(20, Math.min(32, maxW, maxH));
-	})();
+	})());
 
 	function openCustomModal() {
 		ui.showCustomModal = true;
@@ -624,8 +628,8 @@
 	<title>Zsweep</title>
 </svelte:head>
 
-<svelte:document on:keydown={handleInput} />
-<svelte:window on:mouseup={() => (input.isMouseDown = false)} bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
+<svelte:document onkeydown={handleInput} />
+<svelte:window onmouseup={() => (input.isMouseDown = false)} bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
 <div
 	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {$zenMode
@@ -661,7 +665,7 @@
 					class="flex items-center gap-2 transition-colors {game.mode === 'standard'
 						? 'font-bold text-main'
 						: 'text-sub hover:text-text'}"
-					on:click={() => setMode('standard')}
+					onclick={() => setMode('standard')}
 				>
 					<InfinityIcon size={12} /><span>standard</span>
 				</button>
@@ -669,7 +673,7 @@
 					class="flex items-center gap-2 transition-colors {game.mode === 'time'
 						? 'font-bold text-main'
 						: 'text-sub hover:text-text'}"
-					on:click={() => setMode('time')}
+					onclick={() => setMode('time')}
 				>
 					<Hourglass size={12} /><span>time</span>
 				</button>
@@ -685,7 +689,7 @@
 							class={game.size.label === size.label
 								? 'font-bold text-main'
 								: 'text-sub hover:text-text'}
-							on:click={() => setSize(size)}>{size.label}</button
+							onclick={() => setSize(size)}>{size.label}</button
 						>
 					{/each}
 				{:else}
@@ -695,7 +699,7 @@
 							class={game.timeLimit === t
 								? 'font-bold text-main'
 								: 'text-sub hover:text-text'}
-							on:click={() => setTime(t)}>{t}s</button
+							onclick={() => setTime(t)}>{t}s</button
 						>
 					{/each}
 				{/if}
@@ -704,7 +708,7 @@
 
 				<button
 					class="text-sub transition-colors hover:text-main"
-					on:click={openCustomModal}
+					onclick={openCustomModal}
 					title="Custom Settings"
 				>
 					<Wrench size={12} />

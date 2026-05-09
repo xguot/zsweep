@@ -1,18 +1,34 @@
 <script lang="ts">
+	import { createBubbler, preventDefault, passive } from 'svelte/legacy';
+
+	const bubble = createBubbler();
 	import { createEventDispatcher } from 'svelte';
 	import { Asterisk, Skull, Radiation, Flame, Flag, X } from 'lucide-svelte';
 	import type { Cell } from '$lib/minesweeper';
 	import type { LineNumberMode } from '$lib/lineNumberStore';
 	import { mineIcon } from '$lib/mineIconStore';
 
-	export let grid: Cell[][] = [];
-	export let cursor: { r: number; c: number } = { r: 0, c: 0 };
-	export let numCols: number;
-	export let gameState: 'pending' | 'playing' | 'finished' = 'pending';
-	export let vimMode: boolean = false;
-	export let isMouseDown: boolean = false;
-	export let lineNumberMode: LineNumberMode = 'off';
-	export let cellSize: number = 32;
+	interface Props {
+		grid?: Cell[][];
+		cursor?: { r: number; c: number };
+		numCols: number;
+		gameState?: 'pending' | 'playing' | 'finished';
+		vimMode?: boolean;
+		isMouseDown?: boolean;
+		lineNumberMode?: LineNumberMode;
+		cellSize?: number;
+	}
+
+	let {
+		grid = [],
+		cursor = { r: 0, c: 0 },
+		numCols,
+		gameState = 'pending',
+		vimMode = false,
+		isMouseDown = false,
+		lineNumberMode = 'off',
+		cellSize = 32
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher();
 
@@ -25,7 +41,7 @@
 
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longPressHandled = false;
-	let touchFeedback: { r: number; c: number } | null = null;
+	let touchFeedback: { r: number; c: number } | null = $state(null);
 
 	function handleLeftClick(r: number, c: number) {
 		dispatch('click', { r, c });
@@ -87,8 +103,8 @@
 <div
 	class="relative select-none bg-bg transition-all duration-300 {vimMode ? 'cursor-none' : ''}"
 	style="touch-action: none;"
-	on:mousedown={handleMouseDown}
-	on:contextmenu|preventDefault
+	onmousedown={handleMouseDown}
+	oncontextmenu={preventDefault(bubble('contextmenu'))}
 	role="grid"
 	tabindex="-1"
 >
@@ -137,18 +153,18 @@
 					{vimMode && cursor.r === r && cursor.c === c ? 'z-10 ring-2 ring-main/50 brightness-110' : ''}
 					{cell.isFlagged ? 'scale-90 bg-sub/20' : 'scale-100'}"
 					style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(10, Math.round(cellSize * 0.44))}px;"
-					on:mousedown={(e) => {
+					onmousedown={(e) => {
 						if (e.button === 2) handleRightClick(r, c);
 					}}
-					on:dblclick={() => handleRightClick(r, c)}
-					on:mouseup={(e) => {
+					ondblclick={() => handleRightClick(r, c)}
+					onmouseup={(e) => {
 						if (e.button === 0) handleLeftClick(r, c);
 					}}
-					on:touchstart|passive={() => handleTouchStart(r, c)}
-					on:touchend={(e) => handleTouchEnd(e, r, c)}
-					on:touchmove={handleTouchMove}
-					on:contextmenu|preventDefault
-					on:mouseenter={() => handleHover(r, c)}
+					use:passive={['touchstart', () => () => handleTouchStart(r, c)]}
+					ontouchend={(e) => handleTouchEnd(e, r, c)}
+					ontouchmove={handleTouchMove}
+					oncontextmenu={preventDefault(bubble('contextmenu'))}
+					onmouseenter={() => handleHover(r, c)}
 					aria-label={cell.isOpen
 						? cell.isMine
 							? 'Mine'
@@ -159,8 +175,8 @@
 				>
 					{#if cell.isOpen}
 						{#if cell.isMine}
-							<svelte:component
-								this={ICONS[$mineIcon]}
+							{@const SvelteComponent = ICONS[$mineIcon]}
+							<SvelteComponent
 								size={iconSize}
 								fill={cell.isExploded ? 'currentColor' : 'none'}
 							/>

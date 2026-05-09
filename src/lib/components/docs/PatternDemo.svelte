@@ -1,10 +1,19 @@
 <script lang="ts">
 	import GameGrid from '$lib/components/GameGrid.svelte';
 
-	export let grid: any[][];
-	export let cols: number;
-	export let title: string;
-	export let desc: string;
+	interface Props {
+		grid: any[][];
+		cols: number;
+		title: string;
+		desc: string;
+	}
+
+	let {
+		grid,
+		cols,
+		title,
+		desc
+	}: Props = $props();
 </script>
 
 <div class="rounded-lg border border-main/10 bg-bg p-6 shadow-sm transition hover:border-main/30">

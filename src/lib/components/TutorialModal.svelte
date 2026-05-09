@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+	const bubble = createBubbler();
 	import { createEventDispatcher } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 	import { ExternalLink, Keyboard, MousePointerClick } from 'lucide-svelte';
@@ -15,19 +18,19 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 <div
 	class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
 	transition:fade={{ duration: 200 }}
-	on:click={close}
+	onclick={close}
 	role="button"
 	tabindex="0"
 >
 	<div
 		class="relative w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-black/30 p-8 shadow-2xl backdrop-blur-md"
 		transition:scale={{ duration: 200, start: 0.95 }}
-		on:click|stopPropagation
+		onclick={stopPropagation(bubble('click'))}
 		role="document"
 	>
 		<div class="space-y-8 font-mono text-text">
@@ -204,7 +207,7 @@
 
 				<button
 					class="ml-auto block text-[10px] font-bold uppercase tracking-widest text-sub opacity-40 transition-opacity hover:opacity-100"
-					on:click={close}
+					onclick={close}
 				>
 					<span class="sm:hidden">Tap to Start</span>
 

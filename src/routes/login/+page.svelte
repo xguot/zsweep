@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { User, Check } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
@@ -18,22 +20,22 @@
 		verifyPassword: '';
 	}
 
-	let loading = false;
-	let errorMsg = '';
-	let successMsg = '';
+	let loading = $state(false);
+	let errorMsg = $state('');
+	let successMsg = $state('');
 
-	let loginData: LoginForm = {
+	let loginData: LoginForm = $state({
 		email: '',
 		password: '',
 		rememberMe: true
-	};
+	});
 
-	let regData: RegisterForm = {
+	let regData: RegisterForm = $state({
 		username: '',
 		email: '',
 		password: '',
 		verifyPassword: ''
-	};
+	});
 
 	async function signInWithProvider(provider: AuthProvider) {
 		loading = true;
@@ -104,7 +106,7 @@
 	<div
 		class="animate-in fade-in zoom-in z-10 grid w-full max-w-4xl grid-cols-1 gap-16 px-4 duration-300 md:grid-cols-2 md:gap-32"
 	>
-		<form on:submit|preventDefault={handleRegister} class="flex flex-col gap-6">
+		<form onsubmit={preventDefault(handleRegister)} class="flex flex-col gap-6">
 			<div class="mb-2 flex items-center gap-2 text-sub">
 				<User size={16} />
 				<span class="font-bold">register</span>
@@ -158,7 +160,7 @@
 
 			<div class="mb-2 grid grid-cols-2 gap-4">
 				<button
-					on:click={() => signInWithProvider('google')}
+					onclick={() => signInWithProvider('google')}
 					disabled={loading}
 					class="flex h-12 items-center justify-center rounded bg-sub/10 text-sub transition-colors hover:bg-sub/20 hover:text-text disabled:opacity-50"
 					title="Sign in with Google"
@@ -170,7 +172,7 @@
 					</svg>
 				</button>
 				<button
-					on:click={() => signInWithProvider('github')}
+					onclick={() => signInWithProvider('github')}
 					disabled={loading}
 					class="flex h-12 items-center justify-center rounded bg-sub/10 text-sub transition-colors hover:bg-sub/20 hover:text-text disabled:opacity-50"
 					title="Sign in with GitHub"
@@ -188,7 +190,7 @@
 				<span class="absolute bg-bg px-2 text-xs text-sub opacity-50">or</span>
 			</div>
 
-			<form on:submit|preventDefault={handleLogin} class="space-y-3">
+			<form onsubmit={preventDefault(handleLogin)} class="space-y-3">
 				<input
 					type="email"
 					placeholder="email"
@@ -208,7 +210,7 @@
 					<button
 						type="button"
 						class="flex select-none items-center gap-2 text-sub transition-colors hover:text-main"
-						on:click={() => (loginData.rememberMe = !loginData.rememberMe)}
+						onclick={() => (loginData.rememberMe = !loginData.rememberMe)}
 					>
 						<div
 							class="flex h-4 w-4 items-center justify-center rounded bg-sub/10 {loginData.rememberMe

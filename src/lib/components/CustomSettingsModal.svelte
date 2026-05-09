@@ -1,33 +1,48 @@
 <script lang="ts">
+	import { run, self } from 'svelte/legacy';
+
 	import { Wrench, X } from 'lucide-svelte';
 
-	export let show = false;
-	export let gameMode: 'standard' | 'time' = 'standard';
 
-	export let currentRows = 9;
-	export let currentCols = 9;
-	export let currentMines = 10;
-	export let currentTime = 15;
 
 	import { createEventDispatcher } from 'svelte';
+	interface Props {
+		show?: boolean;
+		gameMode?: 'standard' | 'time';
+		currentRows?: number;
+		currentCols?: number;
+		currentMines?: number;
+		currentTime?: number;
+	}
+
+	let {
+		show = $bindable(false),
+		gameMode = 'standard',
+		currentRows = 9,
+		currentCols = 9,
+		currentMines = 10,
+		currentTime = 15
+	}: Props = $props();
 	const dispatch = createEventDispatcher();
 
-	let config = {
+	let config = $state({
 		rows: 20,
 		cols: 20,
 		mines: 40,
 		time: 120
-	};
+	});
 
-	$: if (show) {
-		if (gameMode === 'standard') {
-			config.rows = currentRows;
-			config.cols = currentCols;
-			config.mines = currentMines;
-		} else {
-			config.time = currentTime;
+	run(() => {
+		if (show) {
+			if (gameMode === 'standard') {
+				config.rows = currentRows;
+				config.cols = currentCols;
+				config.mines = currentMines;
+			} else {
+				config.time = currentTime;
+			}
 		}
-	}
+	});
 
 	function handleApply() {
 		dispatch('apply', config);
@@ -42,7 +57,7 @@
 {#if show}
 	<div
 		class="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm duration-200"
-		on:click|self={close}
+		onclick={self(close)}
 	>
 		<div class="w-full max-w-sm rounded-xl border border-sub/20 bg-bg p-6 shadow-2xl">
 			<div class="mb-6 flex items-center justify-between">
@@ -50,7 +65,7 @@
 					<Wrench size={18} class="text-main" />
 					<span>Custom {gameMode === 'standard' ? 'Grid' : 'Time'}</span>
 				</h2>
-				<button on:click={close} class="text-sub transition-colors hover:text-error">
+				<button onclick={close} class="text-sub transition-colors hover:text-error">
 					<X size={18} />
 				</button>
 			</div>
@@ -109,7 +124,7 @@
 				{/if}
 
 				<button
-					on:click={handleApply}
+					onclick={handleApply}
 					class="mt-2 w-full rounded-lg bg-main py-2.5 text-xs font-bold uppercase tracking-widest text-bg transition-opacity hover:opacity-90"
 				>
 					Apply Settings

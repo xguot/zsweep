@@ -1,34 +1,53 @@
 <script lang="ts">
+	import { stopPropagation } from 'svelte/legacy';
+
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
 	import { Skull, Eye } from 'lucide-svelte';
 	import MapViewer from './MapViewer.svelte';
 
-	export let win = false;
-	export let time = 0;
-	export let totalMines = 0;
-	export let totalClicks = 0;
-	export let history: number[] = [];
-	export let finalGrid: any[][] = [];
-	export let accuracy = 0;
-	export let sizeLabel = '';
-	export let gridsSolved = 0;
-	export let mode: 'standard' | 'time' = 'standard';
-	export let cells = 0;
-	export let restart: () => void;
+	interface Props {
+		win?: boolean;
+		time?: number;
+		totalMines?: number;
+		totalClicks?: number;
+		history?: number[];
+		finalGrid?: any[][];
+		accuracy?: number;
+		sizeLabel?: string;
+		gridsSolved?: number;
+		mode?: 'standard' | 'time';
+		cells?: number;
+		restart: () => void;
+	}
 
-	let chartCanvas: HTMLCanvasElement;
+	let {
+		win = false,
+		time = 0,
+		totalMines = 0,
+		totalClicks = 0,
+		history = [],
+		finalGrid = [],
+		accuracy = 0,
+		sizeLabel = '',
+		gridsSolved = 0,
+		mode = 'standard',
+		cells = 0,
+		restart
+	}: Props = $props();
+
+	let chartCanvas: HTMLCanvasElement = $state();
 	let chartInstance: Chart | null = null;
-	let showMap = false;
+	let showMap = $state(false);
 
-	$: minesPerMin = totalMines > 0 ? ((totalMines / Math.max(time, 1)) * 60).toFixed(1) : '0.0';
+	let minesPerMin = $derived(totalMines > 0 ? ((totalMines / Math.max(time, 1)) * 60).toFixed(1) : '0.0');
 
-	$: consistency = (() => {
+	let consistency = $derived((() => {
 		if (!history?.length) return 0;
 		const mean = history.reduce((a, b) => a + b, 0) / history.length;
 		const variance = history.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / history.length;
 		return Math.max(0, Math.round(100 - Math.sqrt(variance) * 10));
-	})();
+	})());
 
 	onMount(() => {
 		if (!win || !chartCanvas) return;
@@ -160,7 +179,7 @@
 			<button
 				type="button"
 				class="flex items-center gap-2 rounded-full bg-sub/10 px-6 py-3 font-bold text-main transition-all hover:bg-main hover:text-bg"
-				on:click|stopPropagation={() => (showMap = true)}
+				onclick={stopPropagation(() => (showMap = true))}
 			>
 				<Eye size={18} />
 				<span>View Map</span>
@@ -170,7 +189,7 @@
 		<button
 			type="button"
 			class="cursor-pointer text-xs text-sub opacity-40 transition-opacity hover:opacity-100"
-			on:click={restart}
+			onclick={restart}
 		>
 			press <kbd class="font-sans">tab</kbd> to restart
 		</button>

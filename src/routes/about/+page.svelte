@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { Keyboard, Info, Github, Code2, GitPullRequest, Cpu } from 'lucide-svelte';
 
 	// --- THEME / NAVIGATION ---
@@ -9,13 +11,13 @@
 	import { supabase } from '$lib/supabase'; // Auth + DB
 	import Chart from 'chart.js/auto';
 
-	export let data;
+	let { data } = $props();
 
 	// --- USER STATE ---
 
 	// --- CHART ---
-	let chartCanvas: HTMLCanvasElement;
-	let chartInstance: Chart;
+	let chartCanvas: HTMLCanvasElement = $state();
+	let chartInstance: Chart = $state();
 
 	const createHistogram = (dataPoints: number[], binSize = 10) => {
 		if (dataPoints.length === 0) return { labels: [], counts: [] };
@@ -92,17 +94,19 @@
 		return () => chartInstance.destroy();
 	});
 
-	$: if (chartInstance && $currentTheme) {
-		const newColor = `rgb(${$currentTheme.colors.main})`;
-		const newGrid = `rgba(${$currentTheme.colors.text}, 0.1)`;
-		const newText = `rgb(${$currentTheme.colors.sub})`;
+	run(() => {
+		if (chartInstance && $currentTheme) {
+			const newColor = `rgb(${$currentTheme.colors.main})`;
+			const newGrid = `rgba(${$currentTheme.colors.text}, 0.1)`;
+			const newText = `rgb(${$currentTheme.colors.sub})`;
 
-		chartInstance.data.datasets[0].backgroundColor = newColor;
-		chartInstance.options.scales!.x!.ticks!.color = newText;
-		chartInstance.options.scales!.y!.ticks!.color = newText;
-		chartInstance.options.scales!.y!.grid!.color = newGrid;
-		chartInstance.update();
-	}
+			chartInstance.data.datasets[0].backgroundColor = newColor;
+			chartInstance.options.scales!.x!.ticks!.color = newText;
+			chartInstance.options.scales!.y!.ticks!.color = newText;
+			chartInstance.options.scales!.y!.grid!.color = newGrid;
+			chartInstance.update();
+		}
+	});
 
 	// --- FORMATTING ---
 	const fmtCount = (n: number) => {
@@ -119,7 +123,7 @@
 		return { val: seconds, unit: 'seconds' };
 	};
 
-	$: timeObj = formatTime(data.stats.seconds);
+	let timeObj = $derived(formatTime(data.stats.seconds));
 
 	// --- AUTHENTICATION ---
 	onMount(() => {
@@ -148,7 +152,7 @@
 
 	// --- CONTRIBUTORS FETCH ---
 	type Contributor = { login: string; avatar_url: string; html_url: string };
-	let contributors: Contributor[] = [];
+	let contributors: Contributor[] = $state([]);
 	const GITHUB_TOKEN = ''; // Optional token to avoid rate limits
 
 	onMount(async () => {

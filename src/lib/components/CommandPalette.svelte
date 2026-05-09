@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, self } from 'svelte/legacy';
+
 	import {
 		Search,
 		ChevronRight,
@@ -20,13 +22,17 @@
 	import { lineNumbers, type LineNumberMode } from '$lib/lineNumberStore';
 	import { tick } from 'svelte';
 
-	export let show = false;
+	interface Props {
+		show?: boolean;
+	}
 
-	let paletteView: 'root' | 'themes' | 'linenumbers' | 'mineicons' = 'root';
-	let originalTheme: Theme | null = null;
-	let searchQuery = '';
-	let searchInputEl: HTMLInputElement;
-	let selectedIndex = 0;
+	let { show = $bindable(false) }: Props = $props();
+
+	let paletteView: 'root' | 'themes' | 'linenumbers' | 'mineicons' = $state('root');
+	let originalTheme: Theme | null = $state(null);
+	let searchQuery = $state('');
+	let searchInputEl: HTMLInputElement = $state();
+	let selectedIndex = $state(0);
 
 	const LINE_NUMBER_OPTIONS: { id: LineNumberMode; label: string }[] = [
 		{ id: 'off', label: 'Off' },
@@ -42,25 +48,27 @@
 		{ id: 'flame', label: 'Flame', icon: Flame }
 	];
 
-	$: if (show) {
-		paletteView = 'root';
-		searchQuery = '';
-		selectedIndex = 0;
-		originalTheme = null;
-		tick().then(() => searchInputEl?.focus());
-	}
+	run(() => {
+		if (show) {
+			paletteView = 'root';
+			searchQuery = '';
+			selectedIndex = 0;
+			originalTheme = null;
+			tick().then(() => searchInputEl?.focus());
+		}
+	});
 
-	$: filteredThemes = THEMES.filter((t) =>
+	let filteredThemes = $derived(THEMES.filter((t) =>
 		t.label.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	));
 
-	$: filteredLineNumbers = LINE_NUMBER_OPTIONS.filter((o) =>
+	let filteredLineNumbers = $derived(LINE_NUMBER_OPTIONS.filter((o) =>
 		o.label.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	));
 
-	$: filteredMineIcons = MINE_ICON_OPTIONS.filter((o) =>
+	let filteredMineIcons = $derived(MINE_ICON_OPTIONS.filter((o) =>
 		o.label.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	));
 
 	const COMMANDS = [
 		{
@@ -114,20 +122,20 @@
 		}
 	];
 
-	$: filteredCommands = COMMANDS.filter(
+	let filteredCommands = $derived(COMMANDS.filter(
 		(c) =>
 			c.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			(searchQuery === ':q' && c.id === 'quit')
-	);
+	));
 
-	$: currentItems =
-		paletteView === 'root'
+	let currentItems =
+		$derived(paletteView === 'root'
 			? filteredCommands
 			: paletteView === 'themes'
 				? filteredThemes
 				: paletteView === 'linenumbers'
 					? filteredLineNumbers
-					: filteredMineIcons;
+					: filteredMineIcons);
 
 	function attemptQuit() {
 		try {
@@ -213,8 +221,8 @@
 		aria-modal="true"
 		tabindex="-1"
 		class="animate-in fade-in fixed inset-0 z-[100] flex items-start justify-center bg-black/60 backdrop-blur-sm duration-150"
-		on:mousedown|self={close}
-		on:keydown={handleKeydown}
+		onmousedown={self(close)}
+		onkeydown={handleKeydown}
 	>
 		<div
 			class="mt-[15vh] flex max-h-[50vh] w-[450px] flex-col overflow-hidden rounded-lg border border-sub/20 bg-bg font-mono text-text shadow-2xl"
@@ -224,7 +232,7 @@
 				<input
 					bind:this={searchInputEl}
 					bind:value={searchQuery}
-					on:input={() => {
+					oninput={() => {
 						selectedIndex = 0;
 						if (paletteView === 'themes' && filteredThemes[0]) {
 							applyThemeToRoot(filteredThemes[0]);
@@ -250,16 +258,16 @@
 						<button
 							class="group flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition-colors
 							{i === selectedIndex ? 'bg-sub/20 text-text' : 'text-sub hover:bg-sub/10 hover:text-text'}"
-							on:click={() => executeSelection(item)}
-							on:mouseenter={() => {
+							onclick={() => executeSelection(item)}
+							onmouseenter={() => {
 								selectedIndex = i;
 								if (paletteView === 'themes') applyThemeToRoot(item as Theme);
 							}}
 						>
 							{#if paletteView === 'root'}
+								{@const SvelteComponent = 'icon' in item ? item.icon : Palette}
 								<div class="flex items-center gap-3">
-									<svelte:component
-										this={'icon' in item ? item.icon : Palette}
+									<SvelteComponent
 										size={12}
 										class={i === selectedIndex ? 'text-main' : 'text-sub'}
 									/>
@@ -281,8 +289,7 @@
 								</div>
 							{:else if paletteView === 'mineicons'}
 								<div class="flex items-center gap-3">
-									<svelte:component
-										this={item.icon}
+									<item.icon
 										size={12}
 										class={i === selectedIndex ? 'text-main' : 'text-sub'}
 									/>
