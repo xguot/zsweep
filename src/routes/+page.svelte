@@ -94,6 +94,23 @@
 
 	let currentUser: string | null = null;
 
+	let windowWidth = 0;
+	let windowHeight = 0;
+
+	$: cellSize = (() => {
+		if (!windowWidth) return 32;
+		const cols = game.size.cols;
+		const rows = game.size.rows;
+		const gap = 4;
+		const hPad = 64;
+		const vPad = 260; // top UI + footer breathing room
+		const availW = windowWidth - hPad;
+		const availH = windowHeight - vPad;
+		const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
+		const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
+		return Math.max(20, Math.min(32, maxW, maxH));
+	})();
+
 	function openCustomModal() {
 		ui.showCustomModal = true;
 	}
@@ -608,7 +625,7 @@
 </svelte:head>
 
 <svelte:document on:keydown={handleInput} />
-<svelte:window on:mouseup={() => (input.isMouseDown = false)} />
+<svelte:window on:mouseup={() => (input.isMouseDown = false)} bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
 <div
 	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {$zenMode
@@ -720,6 +737,7 @@
 				vimMode={input.vimMode}
 				isMouseDown={input.isMouseDown}
 				lineNumberMode={$lineNumbers}
+				{cellSize}
 				on:click={(e) => handleClick(e.detail.r, e.detail.c)}
 				on:flag={(e) => toggleFlag(e.detail.r, e.detail.c)}
 				on:hover={(e) => {

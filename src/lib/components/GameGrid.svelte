@@ -12,6 +12,7 @@
 	export let vimMode: boolean = false;
 	export let isMouseDown: boolean = false;
 	export let lineNumberMode: LineNumberMode = 'off';
+	export let cellSize: number = 32;
 
 	const dispatch = createEventDispatcher();
 
@@ -100,7 +101,7 @@
 						? c + 1
 						: Math.abs(c - cursor.c)
 					: c + 1}
-				<div class="flex h-4 w-8 items-center justify-center {c === cursor.c ? 'text-main' : ''}">
+				<div class="flex h-4 items-center justify-center {c === cursor.c ? 'text-main' : ''}" style="width: {cellSize}px;">
 					{num}
 				</div>
 			{/each}
@@ -113,7 +114,7 @@
 						? grid.length - r
 						: Math.abs(r - cursor.r)
 					: grid.length - r}
-				<div class="flex h-8 w-6 items-center justify-end {r === cursor.r ? 'text-main' : ''}">
+				<div class="flex w-6 items-center justify-end {r === cursor.r ? 'text-main' : ''}" style="height: {cellSize}px;">
 					{num}
 				</div>
 			{/each}
@@ -123,9 +124,10 @@
 		{#each grid as row, r (r)}
 			{#each row as cell, c (c)}
 				{@const isPressed = isMouseDown && cursor.r === r && cursor.c === c && !cell.isFlagged}
+				{@const iconSize = Math.max(10, Math.round(cellSize * 0.55))}
 				<button
 					type="button"
-					class="relative flex h-8 w-8 select-none items-center justify-center rounded-sm text-sm font-bold transition-all
+					class="relative flex select-none items-center justify-center rounded-sm font-bold transition-all
 					duration-200 focus:outline-none
 					{vimMode ? 'cursor-none' : 'cursor-default'}
 					{cell.isOpen || isPressed ? 'bg-sub/10' : `bg-sub/30 ${!vimMode ? 'hover:bg-sub/50' : ''}`}
@@ -134,6 +136,7 @@
 					{cell.isExploded ? '!border-red-600 !bg-red-600' : ''}
 					{vimMode && cursor.r === r && cursor.c === c ? 'z-10 ring-2 ring-main/50 brightness-110' : ''}
 					{cell.isFlagged ? 'scale-90 bg-sub/20' : 'scale-100'}"
+					style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(10, Math.round(cellSize * 0.44))}px;"
 					on:mousedown={(e) => {
 						if (e.button === 2) handleRightClick(r, c);
 					}}
@@ -158,7 +161,7 @@
 						{#if cell.isMine}
 							<svelte:component
 								this={ICONS[$mineIcon]}
-								size={18}
+								size={iconSize}
 								fill={cell.isExploded ? 'currentColor' : 'none'}
 							/>
 						{:else if cell.neighborCount > 0}
@@ -177,12 +180,12 @@
 					{:else if cell.isFlagged}
 						{#if cell.isWrong}
 							<div class="relative flex items-center justify-center">
-								<Flag size={14} fill="currentColor" class="text-error opacity-50" />
-								<X size={20} class="absolute text-error" />
+								<Flag size={Math.max(8, iconSize - 4)} fill="currentColor" class="text-error opacity-50" />
+								<X size={iconSize} class="absolute text-error" />
 							</div>
 						{:else}
 							<span class="animate-in zoom-in-50 text-error duration-200">
-								<Flag size={14} fill="currentColor" />
+								<Flag size={Math.max(8, iconSize - 4)} fill="currentColor" />
 							</span>
 						{/if}
 					{/if}
