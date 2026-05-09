@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Keyboard, Info, Github, Code2, GitPullRequest, Cpu } from 'lucide-svelte';
 	import { currentTheme } from '$lib/themeStore.svelte';
 	import { supabase } from '$lib/supabase';
@@ -9,8 +10,8 @@
 	let currentUser: string | null = $state(null);
 
 	// --- CHART ---
-	let chartCanvas: HTMLCanvasElement | undefined = $state();
-	let chartInstance: Chart | undefined = $state();
+	let chartCanvas: HTMLCanvasElement;
+	let chartInstance: Chart | undefined;
 
 	const createHistogram = (dataPoints: number[], binSize = 10) => {
 		if (dataPoints.length === 0) return { labels: [], counts: [] };
@@ -35,8 +36,7 @@
 		};
 	};
 
-	$effect(() => {
-		if (!chartCanvas) return;
+	onMount(() => {
 		const ctx = chartCanvas.getContext('2d');
 		if (!ctx) return;
 
@@ -90,18 +90,13 @@
 	});
 
 	$effect(() => {
-		if (chartInstance && currentTheme.value) {
-			const theme = currentTheme.value;
-			const newColor = `rgb(${theme.colors.main})`;
-			const newGrid = `rgba(${theme.colors.text}, 0.1)`;
-			const newText = `rgb(${theme.colors.sub})`;
-
-			chartInstance.data.datasets[0].backgroundColor = newColor;
-			chartInstance.options.scales!.x!.ticks!.color = newText;
-			chartInstance.options.scales!.y!.ticks!.color = newText;
-			chartInstance.options.scales!.y!.grid!.color = newGrid;
-			chartInstance.update();
-		}
+		if (!chartInstance || !currentTheme.value) return;
+		const theme = currentTheme.value;
+		chartInstance.data.datasets[0].backgroundColor = `rgb(${theme.colors.main})`;
+		chartInstance.options.scales!.x!.ticks!.color = `rgb(${theme.colors.sub})`;
+		chartInstance.options.scales!.y!.ticks!.color = `rgb(${theme.colors.sub})`;
+		chartInstance.options.scales!.y!.grid!.color = `rgba(${theme.colors.text}, 0.1)`;
+		chartInstance.update();
 	});
 
 	// --- FORMATTING ---

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Chart from 'chart.js/auto';
+	import { onMount } from 'svelte';
 	import { Skull, Eye } from 'lucide-svelte';
 	import MapViewer from './MapViewer.svelte';
 
@@ -13,8 +14,10 @@
 		accuracy?: number;
 		sizeLabel?: string;
 		gridsSolved?: number;
+		gridsPlayed?: number;
 		mode?: 'standard' | 'time';
 		cells?: number;
+		totalGlobalSeconds?: number;
 		restart: () => void;
 	}
 
@@ -33,7 +36,7 @@
 		restart
 	}: Props = $props();
 
-	let chartCanvas: HTMLCanvasElement | undefined = $state();
+	let chartCanvas: HTMLCanvasElement;
 	let chartInstance: Chart | null = null;
 	let showMap = $state(false);
 
@@ -46,16 +49,19 @@
 		return Math.max(0, Math.round(100 - Math.sqrt(variance) * 10));
 	})());
 
-	$effect(() => {
+	onMount(() => {
 		if (!win || !chartCanvas) return;
+		// Chart.js needs ≥2 points to draw a line; pad a single-bucket game
+		const chartData = history.length === 0 ? [] : history.length === 1 ? [history[0], history[0]] : [...history];
+		if (chartData.length === 0) return;
 
 		chartInstance = new Chart(chartCanvas, {
 			type: 'line',
 			data: {
-				labels: history.map((_, i) => i + 1),
+				labels: chartData.map((_, i) => i + 1),
 				datasets: [
 					{
-						data: history,
+						data: chartData,
 						borderColor: '#d8b4fe',
 						backgroundColor: 'rgba(216, 180, 254, 0.1)',
 						fill: true,
