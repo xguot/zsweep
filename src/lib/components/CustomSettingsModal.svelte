@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { run, self } from 'svelte/legacy';
-
 	import { Wrench, X } from 'lucide-svelte';
 
+	interface ConfigPayload {
+		rows: number;
+		cols: number;
+		mines: number;
+		time: number;
+	}
 
-
-	import { createEventDispatcher } from 'svelte';
 	interface Props {
 		show?: boolean;
 		gameMode?: 'standard' | 'time';
@@ -13,6 +15,7 @@
 		currentCols?: number;
 		currentMines?: number;
 		currentTime?: number;
+		onapply?: (config: ConfigPayload) => void;
 	}
 
 	let {
@@ -21,9 +24,9 @@
 		currentRows = 9,
 		currentCols = 9,
 		currentMines = 10,
-		currentTime = 15
+		currentTime = 15,
+		onapply
 	}: Props = $props();
-	const dispatch = createEventDispatcher();
 
 	let config = $state({
 		rows: 20,
@@ -32,7 +35,7 @@
 		time: 120
 	});
 
-	run(() => {
+	$effect(() => {
 		if (show) {
 			if (gameMode === 'standard') {
 				config.rows = currentRows;
@@ -45,7 +48,7 @@
 	});
 
 	function handleApply() {
-		dispatch('apply', config);
+		onapply?.(config);
 		show = false;
 	}
 
@@ -57,7 +60,7 @@
 {#if show}
 	<div
 		class="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm duration-200"
-		onclick={self(close)}
+		onclick={(e) => { if (e.target === e.currentTarget) close(); }}
 	>
 		<div class="w-full max-w-sm rounded-xl border border-sub/20 bg-bg p-6 shadow-2xl">
 			<div class="mb-6 flex items-center justify-between">

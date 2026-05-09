@@ -1,19 +1,12 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
-
 	import { Keyboard, Info, Github, Code2, GitPullRequest, Cpu } from 'lucide-svelte';
-
-	// --- THEME / NAVIGATION ---
-	import { currentTheme } from '$lib/themeStore'; // Light/dark theme state
-
-	// --- SVELTE / THIRD-PARTY ---
-	import { onMount } from 'svelte';
-	import { supabase } from '$lib/supabase'; // Auth + DB
+	import { currentTheme } from '$lib/themeStore.svelte';
+	import { supabase } from '$lib/supabase';
 	import Chart from 'chart.js/auto';
 
 	let { data } = $props();
 
-	// --- USER STATE ---
+	let currentUser: string | null = $state(null);
 
 	// --- CHART ---
 	let chartCanvas: HTMLCanvasElement = $state();
@@ -42,7 +35,7 @@
 		};
 	};
 
-	onMount(() => {
+	$effect(() => {
 		const ctx = chartCanvas.getContext('2d');
 		if (!ctx) return;
 
@@ -54,9 +47,10 @@
 
 		const { labels, counts } = createHistogram(validTimes, 10);
 
-		const mainColor = $currentTheme ? `rgb(${$currentTheme.colors.main})` : '#64b5f6';
-		const gridColor = $currentTheme ? `rgba(${$currentTheme.colors.text}, 0.1)` : '#333';
-		const textColor = $currentTheme ? `rgb(${$currentTheme.colors.sub})` : '#888';
+		const theme = currentTheme.value;
+		const mainColor = theme ? `rgb(${theme.colors.main})` : '#64b5f6';
+		const gridColor = theme ? `rgba(${theme.colors.text}, 0.1)` : '#333';
+		const textColor = theme ? `rgb(${theme.colors.sub})` : '#888';
 
 		chartInstance = new Chart(ctx, {
 			type: 'bar',
@@ -94,11 +88,12 @@
 		return () => chartInstance.destroy();
 	});
 
-	run(() => {
-		if (chartInstance && $currentTheme) {
-			const newColor = `rgb(${$currentTheme.colors.main})`;
-			const newGrid = `rgba(${$currentTheme.colors.text}, 0.1)`;
-			const newText = `rgb(${$currentTheme.colors.sub})`;
+	$effect(() => {
+		if (chartInstance && currentTheme.value) {
+			const theme = currentTheme.value;
+			const newColor = `rgb(${theme.colors.main})`;
+			const newGrid = `rgba(${theme.colors.text}, 0.1)`;
+			const newText = `rgb(${theme.colors.sub})`;
 
 			chartInstance.data.datasets[0].backgroundColor = newColor;
 			chartInstance.options.scales!.x!.ticks!.color = newText;
@@ -126,7 +121,7 @@
 	let timeObj = $derived(formatTime(data.stats.seconds));
 
 	// --- AUTHENTICATION ---
-	onMount(() => {
+	$effect(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
 				currentUser =
@@ -155,20 +150,20 @@
 	let contributors: Contributor[] = $state([]);
 	const GITHUB_TOKEN = ''; // Optional token to avoid rate limits
 
-	onMount(async () => {
-		try {
-			const headers: Record<string, string> = {};
-			if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+	$effect(() => {
+		const headers: Record<string, string> = {};
+		if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
 
-			const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
-				headers
+		fetch('https://api.github.com/repos/xguot/zsweep/contributors', { headers })
+			.then((res) => {
+				if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+				return res.json();
+			})
+			.then((json) => { contributors = json; })
+			.catch((err) => {
+				console.error('Failed to fetch contributors', err);
+				contributors = [];
 			});
-			if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-			contributors = await res.json();
-		} catch (err) {
-			console.error('Failed to fetch contributors', err);
-			contributors = [];
-		}
 	});
 </script>
 

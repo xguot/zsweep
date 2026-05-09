@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import confetti from 'canvas-confetti';
 	import {
 		Grid3x3,
@@ -28,8 +27,8 @@
 	import ResultView from '$lib/components/ResultView.svelte';
 	import CustomSettingsModal from '$lib/components/CustomSettingsModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
-	import { zenMode } from '$lib/zenStore';
-	import { lineNumbers } from '$lib/lineNumberStore';
+	import { zenMode } from '$lib/zenStore.svelte';
+	import { lineNumbers } from '$lib/lineNumberStore.svelte';
 
 	import type { PageData } from './$types';
 	interface Props {
@@ -124,9 +123,7 @@
 		localStorage.setItem('zsweep-visited', 'true');
 	}
 
-	function applyCustomSettings(event: CustomEvent) {
-		const config = event.detail;
-
+	function applyCustomSettings(config: { rows: number; cols: number; mines: number; time: number }) {
 		if (game.mode === 'standard') {
 			const r = Math.max(5, Math.min(50, config.rows));
 			const c = Math.max(5, Math.min(50, config.cols));
@@ -599,13 +596,12 @@
 		if (error) console.error('Error saving result:', error);
 	}
 
-	onMount(async () => {
-		const {
-			data: { session }
-		} = await supabase.auth.getSession();
-		if (session?.user) {
-			currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
-		}
+	$effect(() => {
+		supabase.auth.getSession().then(({ data: { session } }) => {
+			if (session?.user) {
+				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+			}
+		});
 
 		const hasVisited = localStorage.getItem('zsweep-visited');
 		if (!hasVisited) {
@@ -632,7 +628,7 @@
 <svelte:window onmouseup={() => (input.isMouseDown = false)} bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
 <div
-	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {$zenMode
+	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
 		? 'fixed inset-0 justify-center'
 		: ''}"
 >
@@ -656,7 +652,7 @@
 	{:else}
 		<div
 			class="mb-8 flex select-none items-center gap-6 rounded-lg bg-sub/10 px-4 py-2 text-xs transition-all duration-300 {game.state ===
-				'playing' || $zenMode
+				'playing' || zenMode.value
 				? 'pointer-events-none opacity-0'
 				: 'opacity-100'}"
 		>
@@ -717,7 +713,7 @@
 		</div>
 
 		<div
-			class="animate-in fade-in flex flex-col gap-2 duration-300 {$zenMode
+			class="animate-in fade-in flex flex-col gap-2 duration-300 {zenMode.value
 				? 'scale-110'
 				: 'scale-100'}"
 			style="transition: transform 500ms ease-in-out;"
@@ -740,15 +736,15 @@
 				gameState={game.state}
 				vimMode={input.vimMode}
 				isMouseDown={input.isMouseDown}
-				lineNumberMode={$lineNumbers}
+				lineNumberMode={lineNumbers.value}
 				{cellSize}
-				on:click={(e) => handleClick(e.detail.r, e.detail.c)}
-				on:flag={(e) => toggleFlag(e.detail.r, e.detail.c)}
-				on:hover={(e) => {
-					input.cursor = e.detail;
+				onclick={(e) => handleClick(e.r, e.c)}
+				onflag={(e) => toggleFlag(e.r, e.c)}
+				onhover={(e) => {
+					input.cursor = e;
 					input.vimMode = false;
 				}}
-				on:mousedown={() => {
+				onmousedown={() => {
 					if (game.state === 'playing') input.isMouseDown = true;
 					input.vimMode = false;
 				}}
@@ -763,11 +759,11 @@
 		currentCols={game.size.cols}
 		currentMines={game.size.mines}
 		currentTime={game.timeLimit}
-		on:apply={applyCustomSettings}
+		onapply={applyCustomSettings}
 	/>
 
 	{#if showTutorial}
-		<TutorialModal on:close={closeTutorial} />
+		<TutorialModal onclose={closeTutorial} />
 	{/if}
 
 	{#if search.active}
@@ -785,7 +781,7 @@
 	{/if}
 
 	<footer
-		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-20 text-xs text-sub transition-all duration-300 {$zenMode
+		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-20 text-xs text-sub transition-all duration-300 {zenMode.value
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>

@@ -1,7 +1,4 @@
 <script lang="ts">
-	import { stopPropagation } from 'svelte/legacy';
-
-	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
 	import { Skull, Eye } from 'lucide-svelte';
 	import MapViewer from './MapViewer.svelte';
@@ -49,7 +46,7 @@
 		return Math.max(0, Math.round(100 - Math.sqrt(variance) * 10));
 	})());
 
-	onMount(() => {
+	$effect(() => {
 		if (!win || !chartCanvas) return;
 
 		chartInstance = new Chart(chartCanvas, {
@@ -179,7 +176,7 @@
 			<button
 				type="button"
 				class="flex items-center gap-2 rounded-full bg-sub/10 px-6 py-3 font-bold text-main transition-all hover:bg-main hover:text-bg"
-				onclick={stopPropagation(() => (showMap = true))}
+				onclick={(e) => { e.stopPropagation(); showMap = true; }}
 			>
 				<Eye size={18} />
 				<span>View Map</span>

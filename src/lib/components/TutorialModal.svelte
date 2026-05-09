@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { createBubbler, stopPropagation } from 'svelte/legacy';
-
-	const bubble = createBubbler();
-	import { createEventDispatcher } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 	import { ExternalLink, Keyboard, MousePointerClick } from 'lucide-svelte';
 
-	const dispatch = createEventDispatcher();
+	interface Props {
+		onclose?: () => void;
+	}
+
+	let { onclose }: Props = $props();
 
 	function close() {
-		dispatch('close');
+		onclose?.();
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -30,7 +30,7 @@
 	<div
 		class="relative w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-black/30 p-8 shadow-2xl backdrop-blur-md"
 		transition:scale={{ duration: 200, start: 0.95 }}
-		onclick={stopPropagation(bubble('click'))}
+		onclick={(e) => e.stopPropagation()}
 		role="document"
 	>
 		<div class="space-y-8 font-mono text-text">

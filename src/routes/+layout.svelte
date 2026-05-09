@@ -1,13 +1,12 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { Bomb, User, LogOut, BookOpen, Info, Palette } from 'lucide-svelte';
 
 	import { supabase } from '$lib/supabase';
-	import { currentTheme } from '$lib/themeStore';
-	import { zenMode } from '$lib/zenStore';
+	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
+	import { zenMode } from '$lib/zenStore.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	interface Props {
 		children?: import('svelte').Snippet;
@@ -16,7 +15,7 @@
 	let { children }: Props = $props();
 
 	let isHomePage = $derived($page.url.pathname === '/');
-	let showZenUI = $derived($zenMode && isHomePage);
+	let showZenUI = $derived(zenMode.value && isHomePage);
 
 	let currentUser: string | null = $state(null);
 	let showPalette = $state(false);
@@ -91,7 +90,7 @@
 				active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
 			if (!isInput && !showPalette) {
 				e.preventDefault();
-				$zenMode = !$zenMode;
+				zenMode.toggle();
 				return;
 			}
 		}
@@ -115,7 +114,11 @@
 		}
 	}
 
-	onMount(() => {
+	$effect(() => {
+		applyThemeToRoot(currentTheme.value);
+	});
+
+	$effect(() => {
 		const aboutSeen = localStorage.getItem('zsweep-seen-about');
 		const manualSeen = localStorage.getItem('zsweep-seen-manual');
 
@@ -323,7 +326,7 @@
 				class="flex flex-col justify-end text-right text-[10px] font-bold uppercase tracking-widest text-sub opacity-60"
 			>
 				<div class="flex items-center gap-2">
-					<span>{$currentTheme?.label || 'default'}</span>
+					<span>{currentTheme.value?.label || 'default'}</span>
 					<Palette size={10} />
 				</div>
 			</div>

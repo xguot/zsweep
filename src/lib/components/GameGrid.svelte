@@ -1,22 +1,24 @@
 <script lang="ts">
-	import { createBubbler, preventDefault, passive } from 'svelte/legacy';
-
-	const bubble = createBubbler();
-	import { createEventDispatcher } from 'svelte';
 	import { Asterisk, Skull, Radiation, Flame, Flag, X } from 'lucide-svelte';
 	import type { Cell } from '$lib/minesweeper';
-	import type { LineNumberMode } from '$lib/lineNumberStore';
-	import { mineIcon } from '$lib/mineIconStore';
+	import type { LineNumberMode } from '$lib/lineNumberStore.svelte';
+	import { mineIcon } from '$lib/mineIconStore.svelte';
+
+	interface CellPos { r: number; c: number }
 
 	interface Props {
 		grid?: Cell[][];
-		cursor?: { r: number; c: number };
+		cursor?: CellPos;
 		numCols: number;
 		gameState?: 'pending' | 'playing' | 'finished';
 		vimMode?: boolean;
 		isMouseDown?: boolean;
 		lineNumberMode?: LineNumberMode;
 		cellSize?: number;
+		onclick?: (pos: CellPos) => void;
+		onflag?: (pos: CellPos) => void;
+		onhover?: (pos: CellPos) => void;
+		onmousedown?: () => void;
 	}
 
 	let {
@@ -27,10 +29,12 @@
 		vimMode = false,
 		isMouseDown = false,
 		lineNumberMode = 'off',
-		cellSize = 32
+		cellSize = 32,
+		onclick,
+		onflag,
+		onhover,
+		onmousedown
 	}: Props = $props();
-
-	const dispatch = createEventDispatcher();
 
 	const ICONS = {
 		asterisk: Asterisk,
@@ -44,19 +48,25 @@
 	let touchFeedback: { r: number; c: number } | null = $state(null);
 
 	function handleLeftClick(r: number, c: number) {
-		dispatch('click', { r, c });
+		onclick?.({ r, c });
 	}
 
 	function handleRightClick(r: number, c: number) {
-		dispatch('flag', { r, c });
+		onflag?.({ r, c });
 	}
 
 	function handleHover(r: number, c: number) {
-		dispatch('hover', { r, c });
+		onhover?.({ r, c });
 	}
 
 	function handleMouseDown() {
-		dispatch('mousedown');
+		onmousedown?.();
+	}
+
+	function passiveTouchStart(node: HTMLElement, handler: () => void) {
+		const fn = () => handler();
+		node.addEventListener('touchstart', fn, { passive: true });
+		return { destroy: () => node.removeEventListener('touchstart', fn) };
 	}
 
 	function triggerTouchFeedback(r: number, c: number) {
@@ -104,7 +114,7 @@
 	class="relative select-none bg-bg transition-all duration-300 {vimMode ? 'cursor-none' : ''}"
 	style="touch-action: none;"
 	onmousedown={handleMouseDown}
-	oncontextmenu={preventDefault(bubble('contextmenu'))}
+	oncontextmenu={(e) => e.preventDefault()}
 	role="grid"
 	tabindex="-1"
 >
@@ -160,10 +170,10 @@
 					onmouseup={(e) => {
 						if (e.button === 0) handleLeftClick(r, c);
 					}}
-					use:passive={['touchstart', () => () => handleTouchStart(r, c)]}
+					use:passiveTouchStart={() => handleTouchStart(r, c)}
 					ontouchend={(e) => handleTouchEnd(e, r, c)}
 					ontouchmove={handleTouchMove}
-					oncontextmenu={preventDefault(bubble('contextmenu'))}
+					oncontextmenu={(e) => e.preventDefault()}
 					onmouseenter={() => handleHover(r, c)}
 					aria-label={cell.isOpen
 						? cell.isMine
@@ -175,7 +185,7 @@
 				>
 					{#if cell.isOpen}
 						{#if cell.isMine}
-							{@const SvelteComponent = ICONS[$mineIcon]}
+							{@const SvelteComponent = ICONS[mineIcon.value]}
 							<SvelteComponent
 								size={iconSize}
 								fill={cell.isExploded ? 'currentColor' : 'none'}

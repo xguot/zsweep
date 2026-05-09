@@ -1,4 +1,3 @@
-import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { THEMES, type Theme } from './themes';
 
@@ -6,7 +5,16 @@ const DEFAULT_THEME = THEMES[3];
 const savedThemeName = browser ? localStorage.getItem('zsweep_theme') : null;
 const initialTheme = THEMES.find((t) => t.name === savedThemeName) || DEFAULT_THEME;
 
-export const currentTheme = writable<Theme>(initialTheme);
+class ThemeStore {
+	value = $state<Theme>(initialTheme);
+
+	set(theme: Theme) {
+		this.value = theme;
+		applyThemeToRoot(theme);
+	}
+}
+
+export const currentTheme = new ThemeStore();
 
 export function applyThemeToRoot(theme: Theme): void {
 	if (!browser) return;
@@ -35,7 +43,3 @@ function updateFavicon(mainColor: string): void {
 		favicon.href = `data:image/svg+xml;base64,${btoa(svg)}`;
 	}, 0);
 }
-
-currentTheme.subscribe((theme) => {
-	applyThemeToRoot(theme);
-});

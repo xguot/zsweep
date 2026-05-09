@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { run, self } from 'svelte/legacy';
-
 	import {
 		Search,
 		ChevronRight,
@@ -16,10 +14,10 @@
 		LogOut
 	} from 'lucide-svelte';
 	import { THEMES, type Theme } from '$lib/themes';
-	import { currentTheme, applyThemeToRoot } from '$lib/themeStore';
-	import { mineIcon } from '$lib/mineIconStore';
-	import { zenMode } from '$lib/zenStore';
-	import { lineNumbers, type LineNumberMode } from '$lib/lineNumberStore';
+	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
+	import { mineIcon, type MineIcon } from '$lib/mineIconStore.svelte';
+	import { zenMode } from '$lib/zenStore.svelte';
+	import { lineNumbers, type LineNumberMode } from '$lib/lineNumberStore.svelte';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -48,7 +46,7 @@
 		{ id: 'flame', label: 'Flame', icon: Flame }
 	];
 
-	run(() => {
+	$effect(() => {
 		if (show) {
 			paletteView = 'root';
 			searchQuery = '';
@@ -70,13 +68,13 @@
 		o.label.toLowerCase().includes(searchQuery.toLowerCase())
 	));
 
-	const COMMANDS = [
+	let COMMANDS = $derived([
 		{
 			id: 'theme',
 			label: 'Theme...',
 			icon: Palette,
 			action: () => {
-				originalTheme = $currentTheme;
+				originalTheme = currentTheme.value;
 				paletteView = 'themes';
 				searchQuery = '';
 				selectedIndex = 0;
@@ -97,9 +95,9 @@
 		{
 			id: 'zen',
 			label: 'Toggle Zen Mode',
-			icon: $zenMode ? EyeOff : Eye,
+			icon: zenMode.value ? EyeOff : Eye,
 			action: () => {
-				$zenMode = !$zenMode;
+				zenMode.toggle();
 				close();
 			}
 		},
@@ -120,7 +118,7 @@
 			icon: LogOut,
 			action: () => attemptQuit()
 		}
-	];
+	]);
 
 	let filteredCommands = $derived(COMMANDS.filter(
 		(c) =>
@@ -194,14 +192,13 @@
 			item.action();
 		} else if (paletteView === 'themes') {
 			originalTheme = null;
-			applyThemeToRoot(item as Theme);
-			$currentTheme = item;
+			currentTheme.set(item as Theme);
 			close();
 		} else if (paletteView === 'linenumbers') {
-			$lineNumbers = item.id;
+			lineNumbers.set(item.id as LineNumberMode);
 			close();
 		} else if (paletteView === 'mineicons') {
-			$mineIcon = item.id;
+			mineIcon.set(item.id as MineIcon);
 			close();
 		}
 	}
@@ -221,7 +218,7 @@
 		aria-modal="true"
 		tabindex="-1"
 		class="animate-in fade-in fixed inset-0 z-[100] flex items-start justify-center bg-black/60 backdrop-blur-sm duration-150"
-		onmousedown={self(close)}
+		onmousedown={(e) => { if (e.target === e.currentTarget) close(); }}
 		onkeydown={handleKeydown}
 	>
 		<div
@@ -294,14 +291,14 @@
 										class={i === selectedIndex ? 'text-main' : 'text-sub'}
 									/>
 									<span>{item.label}</span>
-									{#if $mineIcon === item.id}
+									{#if mineIcon.value === item.id}
 										<span class="text-main">✓</span>
 									{/if}
 								</div>
 							{:else}
 								<div class="flex items-center gap-3">
 									<span>{item.label}</span>
-									{#if $lineNumbers === item.id}
+									{#if lineNumbers.value === item.id}
 										<span class="text-main">✓</span>
 									{/if}
 								</div>
