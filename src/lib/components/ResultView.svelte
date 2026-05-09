@@ -14,10 +14,8 @@
 		accuracy?: number;
 		sizeLabel?: string;
 		gridsSolved?: number;
-		gridsPlayed?: number;
 		mode?: 'standard' | 'time';
 		cells?: number;
-		totalGlobalSeconds?: number;
 		restart: () => void;
 	}
 

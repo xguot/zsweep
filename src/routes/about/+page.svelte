@@ -147,19 +147,18 @@
 	const GITHUB_TOKEN = ''; // Optional token to avoid rate limits
 
 	$effect(() => {
-		const headers: Record<string, string> = {};
-		if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
-
-		fetch('https://api.github.com/repos/xguot/zsweep/contributors', { headers })
-			.then((res) => {
+		(async () => {
+			const headers: Record<string, string> = {};
+			if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+			try {
+				const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', { headers });
 				if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-				return res.json();
-			})
-			.then((json) => { contributors = json; })
-			.catch((err) => {
+				contributors = await res.json();
+			} catch (err) {
 				console.error('Failed to fetch contributors', err);
 				contributors = [];
-			});
+			}
+		})();
 	});
 </script>
 

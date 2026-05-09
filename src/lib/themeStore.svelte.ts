@@ -10,7 +10,6 @@ class ThemeStore {
 
 	set(theme: Theme) {
 		this.value = theme;
-		applyThemeToRoot(theme);
 	}
 }
 
