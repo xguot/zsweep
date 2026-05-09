@@ -117,7 +117,7 @@
 	let timeObj = $derived(formatTime(data.stats.seconds));
 
 	// --- AUTHENTICATION ---
-	$effect(() => {
+	onMount(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
 				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
@@ -145,21 +145,19 @@
 	let contributors: Contributor[] = $state([]);
 	const GITHUB_TOKEN = ''; // Optional token to avoid rate limits
 
-	$effect(() => {
-		(async () => {
-			const headers: Record<string, string> = {};
-			if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
-			try {
-				const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
-					headers
-				});
-				if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-				contributors = await res.json();
-			} catch (err) {
-				console.error('Failed to fetch contributors', err);
-				contributors = [];
-			}
-		})();
+	onMount(async () => {
+		const headers: Record<string, string> = {};
+		if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+		try {
+			const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
+				headers
+			});
+			if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+			contributors = await res.json();
+		} catch (err) {
+			console.error('Failed to fetch contributors', err);
+			contributors = [];
+		}
 	});
 </script>
 

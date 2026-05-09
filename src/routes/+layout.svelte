@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { Bomb, User, LogOut, BookOpen, Info, Palette } from 'lucide-svelte';
@@ -115,13 +116,10 @@
 		applyThemeToRoot(currentTheme.value);
 	});
 
-	$effect(() => {
-		const aboutSeen = localStorage.getItem('zsweep-seen-about');
-		const manualSeen = localStorage.getItem('zsweep-seen-manual');
-
+	onMount(() => {
 		seenState = {
-			about: !!aboutSeen,
-			manual: !!manualSeen
+			about: !!localStorage.getItem('zsweep-seen-about'),
+			manual: !!localStorage.getItem('zsweep-seen-manual')
 		};
 
 		supabase.auth.getSession().then(({ data: { session } }) => {
