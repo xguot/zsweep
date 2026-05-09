@@ -27,6 +27,7 @@
 	import ResultView from '$lib/components/ResultView.svelte';
 	import CustomSettingsModal from '$lib/components/CustomSettingsModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
+	import { onMount } from 'svelte';
 	import { zenMode } from '$lib/zenStore.svelte';
 	import { lineNumbers } from '$lib/lineNumberStore.svelte';
 
@@ -596,12 +597,13 @@
 		if (error) console.error('Error saving result:', error);
 	}
 
-	$effect(() => {
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			if (session?.user) {
-				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
-			}
-		});
+	onMount(async () => {
+		const {
+			data: { session }
+		} = await supabase.auth.getSession();
+		if (session?.user) {
+			currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+		}
 
 		const hasVisited = localStorage.getItem('zsweep-visited');
 		if (!hasVisited) {
