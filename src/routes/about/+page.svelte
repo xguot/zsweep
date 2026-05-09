@@ -120,8 +120,7 @@
 	$effect(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
-				currentUser =
-					session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
 			}
 		});
 
@@ -151,7 +150,9 @@
 			const headers: Record<string, string> = {};
 			if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
 			try {
-				const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', { headers });
+				const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
+					headers
+				});
 				if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
 				contributors = await res.json();
 			} catch (err) {
@@ -179,8 +180,7 @@
 
 			<!-- Total Time Sweeping -->
 			<div class="flex flex-col items-center gap-1">
-				<span
-					class="mb-2 text-[10px] font-bold uppercase tracking-widest text-sub opacity-50"
+				<span class="mb-2 text-[10px] font-bold uppercase tracking-widest text-sub opacity-50"
 					>total time sweeping</span
 				>
 				<div class="flex flex-col items-center leading-none">
@@ -206,10 +206,10 @@
 		<!-- INTRODUCTION -->
 		<div class="space-y-20 text-sm leading-relaxed text-sub">
 			<p class="mb-16 max-w-2xl text-base text-sub">
-				<span class="font-bold text-main">zsweep</span> is a minimalist, keyboard-driven Minesweeper
-				focused on speed and consistency. Play using Vim-style controls, track your performance
-				over time, and see your progress visualized after each session. Clear boards efficiently,
-				reduce mistakes, and improve with practice.
+				<span class="font-bold text-main">zsweep</span> is a minimalist, keyboard-driven Minesweeper focused
+				on speed and consistency. Play using Vim-style controls, track your performance over time, and
+				see your progress visualized after each session. Clear boards efficiently, reduce mistakes, and
+				improve with practice.
 			</p>
 
 			<!-- PHILOSOPHY SECTION -->
@@ -223,10 +223,10 @@
 					Traditional Minesweeper clones rely heavily on mouse inputs, breaking the <span
 						class="font-bold text-text">flow state</span
 					>.
-					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as
-					a keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`,
-					`b`, `{'{'}`, `{'}'}`) and instant feedback, we aim to create the most efficient
-					and satisfying sweeping engine for developers.
+					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as a
+					keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`, `b`, `{'{'}`,
+					`{'}'}`) and instant feedback, we aim to create the most efficient and satisfying sweeping
+					engine for developers.
 				</p>
 			</section>
 
@@ -248,8 +248,7 @@
 						class="flex flex-col gap-2 rounded-lg border border-sub/10 bg-sub/5 p-4 transition-colors hover:border-main/30"
 					>
 						<span class="font-bold text-text">TypeScript</span>
-						<span class="text-xs">Strict typing for game logic and state machines.</span
-						>
+						<span class="text-xs">Strict typing for game logic and state machines.</span>
 					</div>
 					<div
 						class="flex flex-col gap-2 rounded-lg border border-sub/10 bg-sub/5 p-4 transition-colors hover:border-main/30"
@@ -322,8 +321,8 @@
 				</h2>
 
 				<p class="mb-6 text-center text-sm text-sub">
-					Every contribution, from code to ideas, helps make <span
-						class="font-bold text-main">zsweep</span
+					Every contribution, from code to ideas, helps make <span class="font-bold text-main"
+						>zsweep</span
 					> better.
 				</p>
 
@@ -367,9 +366,7 @@
 							<Github size={20} class="transition-transform group-hover:scale-110" />
 							<div class="flex flex-col items-start">
 								<span class="font-bold">GitHub Repository</span>
-								<span class="text-xs text-sub group-hover:text-main"
-									>Star, Fork, & Contribute</span
-								>
+								<span class="text-xs text-sub group-hover:text-main">Star, Fork, & Contribute</span>
 							</div>
 						</a>
 						<a
@@ -380,9 +377,7 @@
 							<Code2 size={20} class="transition-transform group-hover:scale-110" />
 							<div class="flex flex-col items-start">
 								<span class="font-bold">View Roadmap</span>
-								<span class="text-xs text-sub group-hover:text-main"
-									>Help us build v1.1</span
-								>
+								<span class="text-xs text-sub group-hover:text-main">Help us build v1.1</span>
 							</div>
 						</a>
 					</div>

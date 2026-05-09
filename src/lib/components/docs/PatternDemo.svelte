@@ -8,12 +8,7 @@
 		desc: string;
 	}
 
-	let {
-		grid,
-		cols,
-		title,
-		desc
-	}: Props = $props();
+	let { grid, cols, title, desc }: Props = $props();
 </script>
 
 <div class="rounded-lg border border-main/10 bg-bg p-6 shadow-sm transition hover:border-main/30">

@@ -8,7 +8,7 @@
 		Mail,
 		Github,
 		Twitter,
-        Coffee
+		Coffee
 	} from 'lucide-svelte';
 	import {
 		createGrid,
@@ -101,19 +101,21 @@
 	let windowWidth = $state(0);
 	let windowHeight = $state(0);
 
-	let cellSize = $derived((() => {
-		if (!windowWidth) return 32;
-		const cols = game.size.cols;
-		const rows = game.size.rows;
-		const gap = 4;
-		const hPad = 64;
-		const vPad = 260; // top UI + footer breathing room
-		const availW = windowWidth - hPad;
-		const availH = windowHeight - vPad;
-		const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
-		const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
-		return Math.max(20, Math.min(32, maxW, maxH));
-	})());
+	let cellSize = $derived(
+		(() => {
+			if (!windowWidth) return 32;
+			const cols = game.size.cols;
+			const rows = game.size.rows;
+			const gap = 4;
+			const hPad = 64;
+			const vPad = 260; // top UI + footer breathing room
+			const availW = windowWidth - hPad;
+			const availH = windowHeight - vPad;
+			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
+			const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
+			return Math.max(20, Math.min(32, maxW, maxH));
+		})()
+	);
 
 	function openCustomModal() {
 		ui.showCustomModal = true;
@@ -124,7 +126,12 @@
 		localStorage.setItem('zsweep-visited', 'true');
 	}
 
-	function applyCustomSettings(config: { rows: number; cols: number; mines: number; time: number }) {
+	function applyCustomSettings(config: {
+		rows: number;
+		cols: number;
+		mines: number;
+		time: number;
+	}) {
 		if (game.mode === 'standard') {
 			const r = Math.max(5, Math.min(50, config.rows));
 			const c = Math.max(5, Math.min(50, config.cols));
@@ -280,8 +287,7 @@
 		}
 
 		const canChord =
-			game.grid[r][c].isOpen &&
-			countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
+			game.grid[r][c].isOpen && countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
 
 		const result = canChord ? revealCellsAround(game.grid, r, c) : revealCell(game.grid, r, c);
 
@@ -318,11 +324,7 @@
 			DIRECTIONS.forEach(([dr, dc]) => {
 				const nr = r + dr,
 					nc = c + dc;
-				if (
-					game.grid[nr]?.[nc] &&
-					!game.grid[nr][nc].isOpen &&
-					!game.grid[nr][nc].isFlagged
-				) {
+				if (game.grid[nr]?.[nc] && !game.grid[nr][nc].isOpen && !game.grid[nr][nc].isFlagged) {
 					handleClick(nr, nc);
 				}
 			});
@@ -459,8 +461,7 @@
 				return;
 			}
 			if (action.type === 'PREV_MATCH' && search.matches.length > 0) {
-				search.matchIndex =
-					(search.matchIndex - 1 + search.matches.length) % search.matches.length;
+				search.matchIndex = (search.matchIndex - 1 + search.matches.length) % search.matches.length;
 				input.cursor = search.matches[search.matchIndex];
 				return;
 			}
@@ -532,9 +533,7 @@
 		if (stats.sessionTotalMines === 0) return 0;
 		return Math.max(
 			0,
-			Math.round(
-				((stats.sessionTotalMines - stats.sessionErrors) / stats.sessionTotalMines) * 100
-			)
+			Math.round(((stats.sessionTotalMines - stats.sessionErrors) / stats.sessionTotalMines) * 100)
 		);
 	}
 
@@ -627,7 +626,11 @@
 </svelte:head>
 
 <svelte:document onkeydown={handleInput} />
-<svelte:window onmouseup={() => (input.isMouseDown = false)} bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
+<svelte:window
+	onmouseup={() => (input.isMouseDown = false)}
+	bind:innerWidth={windowWidth}
+	bind:innerHeight={windowHeight}
+/>
 
 <div
 	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
@@ -694,9 +697,7 @@
 					<Hourglass size={12} class="text-sub opacity-50" />
 					{#each GAME_CONFIG.timeLimits as t}
 						<button
-							class={game.timeLimit === t
-								? 'font-bold text-main'
-								: 'text-sub hover:text-text'}
+							class={game.timeLimit === t ? 'font-bold text-main' : 'text-sub hover:text-text'}
 							onclick={() => setTime(t)}>{t}s</button
 						>
 					{/each}
@@ -817,10 +818,10 @@
 			</a>
 		</div>
 
-        <div class="flex items-center gap-2 opacity-40">
-            <span>Coded with</span>
-            <Coffee size={12} />
-            <span>by xguot</span>
-        </div>
+		<div class="flex items-center gap-2 opacity-40">
+			<span>Coded with</span>
+			<Coffee size={12} />
+			<span>by xguot</span>
+		</div>
 	</footer>
 </div>

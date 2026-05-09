@@ -60,7 +60,9 @@
 {#if show}
 	<div
 		class="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm duration-200"
-		onclick={(e) => { if (e.target === e.currentTarget) close(); }}
+		onclick={(e) => {
+			if (e.target === e.currentTarget) close();
+		}}
 	>
 		<div class="w-full max-w-sm rounded-xl border border-sub/20 bg-bg p-6 shadow-2xl">
 			<div class="mb-6 flex items-center justify-between">

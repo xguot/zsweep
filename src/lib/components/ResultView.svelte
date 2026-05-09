@@ -38,19 +38,24 @@
 	let chartInstance: Chart | null = null;
 	let showMap = $state(false);
 
-	let minesPerMin = $derived(totalMines > 0 ? ((totalMines / Math.max(time, 1)) * 60).toFixed(1) : '0.0');
+	let minesPerMin = $derived(
+		totalMines > 0 ? ((totalMines / Math.max(time, 1)) * 60).toFixed(1) : '0.0'
+	);
 
-	let consistency = $derived((() => {
-		if (!history?.length) return 0;
-		const mean = history.reduce((a, b) => a + b, 0) / history.length;
-		const variance = history.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / history.length;
-		return Math.max(0, Math.round(100 - Math.sqrt(variance) * 10));
-	})());
+	let consistency = $derived(
+		(() => {
+			if (!history?.length) return 0;
+			const mean = history.reduce((a, b) => a + b, 0) / history.length;
+			const variance = history.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / history.length;
+			return Math.max(0, Math.round(100 - Math.sqrt(variance) * 10));
+		})()
+	);
 
 	onMount(() => {
 		if (!win || !chartCanvas) return;
 		// Chart.js needs ≥2 points to draw a line; pad a single-bucket game
-		const chartData = history.length === 0 ? [] : history.length === 1 ? [history[0], history[0]] : [...history];
+		const chartData =
+			history.length === 0 ? [] : history.length === 1 ? [history[0], history[0]] : [...history];
 		if (chartData.length === 0) return;
 
 		chartInstance = new Chart(chartCanvas, {
@@ -180,7 +185,10 @@
 			<button
 				type="button"
 				class="flex items-center gap-2 rounded-full bg-sub/10 px-6 py-3 font-bold text-main transition-all hover:bg-main hover:text-bg"
-				onclick={(e) => { e.stopPropagation(); showMap = true; }}
+				onclick={(e) => {
+					e.stopPropagation();
+					showMap = true;
+				}}
 			>
 				<Eye size={18} />
 				<span>View Map</span>

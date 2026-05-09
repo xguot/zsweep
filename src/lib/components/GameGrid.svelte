@@ -4,7 +4,10 @@
 	import type { LineNumberMode } from '$lib/lineNumberStore.svelte';
 	import { mineIcon } from '$lib/mineIconStore.svelte';
 
-	interface CellPos { r: number; c: number }
+	interface CellPos {
+		r: number;
+		c: number;
+	}
 
 	interface Props {
 		grid?: Cell[][];
@@ -127,7 +130,10 @@
 						? c + 1
 						: Math.abs(c - cursor.c)
 					: c + 1}
-				<div class="flex h-4 items-center justify-center {c === cursor.c ? 'text-main' : ''}" style="width: {cellSize}px;">
+				<div
+					class="flex h-4 items-center justify-center {c === cursor.c ? 'text-main' : ''}"
+					style="width: {cellSize}px;"
+				>
 					{num}
 				</div>
 			{/each}
@@ -140,7 +146,10 @@
 						? grid.length - r
 						: Math.abs(r - cursor.r)
 					: grid.length - r}
-				<div class="flex w-6 items-center justify-end {r === cursor.r ? 'text-main' : ''}" style="height: {cellSize}px;">
+				<div
+					class="flex w-6 items-center justify-end {r === cursor.r ? 'text-main' : ''}"
+					style="height: {cellSize}px;"
+				>
 					{num}
 				</div>
 			{/each}
@@ -162,7 +171,10 @@
 					{cell.isExploded ? '!border-red-600 !bg-red-600' : ''}
 					{vimMode && cursor.r === r && cursor.c === c ? 'z-10 ring-2 ring-main/50 brightness-110' : ''}
 					{cell.isFlagged ? 'scale-90 bg-sub/20' : 'scale-100'}"
-					style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(10, Math.round(cellSize * 0.44))}px;"
+					style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(
+						10,
+						Math.round(cellSize * 0.44)
+					)}px;"
 					onmousedown={(e) => {
 						if (e.button === 2) handleRightClick(r, c);
 					}}
@@ -186,10 +198,7 @@
 					{#if cell.isOpen}
 						{#if cell.isMine}
 							{@const SvelteComponent = ICONS[mineIcon.value]}
-							<SvelteComponent
-								size={iconSize}
-								fill={cell.isExploded ? 'currentColor' : 'none'}
-							/>
+							<SvelteComponent size={iconSize} fill={cell.isExploded ? 'currentColor' : 'none'} />
 						{:else if cell.neighborCount > 0}
 							<span
 								class={cell.neighborCount === 1
@@ -206,7 +215,11 @@
 					{:else if cell.isFlagged}
 						{#if cell.isWrong}
 							<div class="relative flex items-center justify-center">
-								<Flag size={Math.max(8, iconSize - 4)} fill="currentColor" class="text-error opacity-50" />
+								<Flag
+									size={Math.max(8, iconSize - 4)}
+									fill="currentColor"
+									class="text-error opacity-50"
+								/>
 								<X size={iconSize} class="absolute text-error" />
 							</div>
 						{:else}

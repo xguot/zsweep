@@ -56,17 +56,17 @@
 		}
 	});
 
-	let filteredThemes = $derived(THEMES.filter((t) =>
-		t.label.toLowerCase().includes(searchQuery.toLowerCase())
-	));
+	let filteredThemes = $derived(
+		THEMES.filter((t) => t.label.toLowerCase().includes(searchQuery.toLowerCase()))
+	);
 
-	let filteredLineNumbers = $derived(LINE_NUMBER_OPTIONS.filter((o) =>
-		o.label.toLowerCase().includes(searchQuery.toLowerCase())
-	));
+	let filteredLineNumbers = $derived(
+		LINE_NUMBER_OPTIONS.filter((o) => o.label.toLowerCase().includes(searchQuery.toLowerCase()))
+	);
 
-	let filteredMineIcons = $derived(MINE_ICON_OPTIONS.filter((o) =>
-		o.label.toLowerCase().includes(searchQuery.toLowerCase())
-	));
+	let filteredMineIcons = $derived(
+		MINE_ICON_OPTIONS.filter((o) => o.label.toLowerCase().includes(searchQuery.toLowerCase()))
+	);
 
 	let COMMANDS = $derived([
 		{
@@ -120,20 +120,23 @@
 		}
 	]);
 
-	let filteredCommands = $derived(COMMANDS.filter(
-		(c) =>
-			c.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			(searchQuery === ':q' && c.id === 'quit')
-	));
+	let filteredCommands = $derived(
+		COMMANDS.filter(
+			(c) =>
+				c.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				(searchQuery === ':q' && c.id === 'quit')
+		)
+	);
 
-	let currentItems =
-		$derived(paletteView === 'root'
+	let currentItems = $derived(
+		paletteView === 'root'
 			? filteredCommands
 			: paletteView === 'themes'
 				? filteredThemes
 				: paletteView === 'linenumbers'
 					? filteredLineNumbers
-					: filteredMineIcons);
+					: filteredMineIcons
+	);
 
 	function attemptQuit() {
 		try {
@@ -218,7 +221,9 @@
 		aria-modal="true"
 		tabindex="-1"
 		class="animate-in fade-in fixed inset-0 z-[100] flex items-start justify-center bg-black/60 backdrop-blur-sm duration-150"
-		onmousedown={(e) => { if (e.target === e.currentTarget) close(); }}
+		onmousedown={(e) => {
+			if (e.target === e.currentTarget) close();
+		}}
 		onkeydown={handleKeydown}
 	>
 		<div
@@ -286,10 +291,7 @@
 								</div>
 							{:else if paletteView === 'mineicons'}
 								<div class="flex items-center gap-3">
-									<item.icon
-										size={12}
-										class={i === selectedIndex ? 'text-main' : 'text-sub'}
-									/>
+									<item.icon size={12} class={i === selectedIndex ? 'text-main' : 'text-sub'} />
 									<span>{item.label}</span>
 									{#if mineIcon.value === item.id}
 										<span class="text-main">✓</span>

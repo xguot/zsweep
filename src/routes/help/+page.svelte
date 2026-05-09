@@ -3,7 +3,15 @@
 	import PatternDemo from '$lib/components/docs/PatternDemo.svelte';
 
 	function cell(r: number, c: number, overrides = {}): any {
-		return { row: r, col: c, isMine: false, isOpen: false, isFlagged: false, neighborCount: 0, ...overrides };
+		return {
+			row: r,
+			col: c,
+			isMine: false,
+			isOpen: false,
+			isFlagged: false,
+			neighborCount: 0,
+			...overrides
+		};
 	}
 
 	const mine = { isMine: true, isFlagged: true };
@@ -14,14 +22,26 @@
 			cols: 5,
 			grid: [
 				[cell(0, 0, mine), cell(0, 1), cell(0, 2, mine), cell(0, 3), cell(0, 4)],
-				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(1)), cell(1, 3, open(1)), cell(1, 4, open(0))]
+				[
+					cell(1, 0, open(1)),
+					cell(1, 1, open(2)),
+					cell(1, 2, open(1)),
+					cell(1, 3, open(1)),
+					cell(1, 4, open(0))
+				]
 			]
 		},
 		'1-2-2-1': {
 			cols: 5,
 			grid: [
 				[cell(0, 0), cell(0, 1, mine), cell(0, 2, mine), cell(0, 3), cell(0, 4)],
-				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(2)), cell(1, 3, open(1)), cell(1, 4, open(0))]
+				[
+					cell(1, 0, open(1)),
+					cell(1, 1, open(2)),
+					cell(1, 2, open(2)),
+					cell(1, 3, open(1)),
+					cell(1, 4, open(0))
+				]
 			]
 		},
 		'wall-3': {
@@ -35,7 +55,13 @@
 			cols: 5,
 			grid: [
 				[cell(0, 0, mine), cell(0, 1), cell(0, 2, mine), cell(0, 3), cell(0, 4, mine)],
-				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(3)), cell(1, 3, open(2)), cell(1, 4, open(1))]
+				[
+					cell(1, 0, open(1)),
+					cell(1, 1, open(2)),
+					cell(1, 2, open(3)),
+					cell(1, 3, open(2)),
+					cell(1, 4, open(1))
+				]
 			]
 		},
 		'corner-l': {
@@ -51,9 +77,27 @@
 			cols: 5,
 			grid: [
 				[cell(0, 0, mine), cell(0, 1), cell(0, 2), cell(0, 3), cell(0, 4, mine)],
-				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2, open(1)), cell(1, 3, open(2)), cell(1, 4, open(1))],
-				[cell(2, 0, open(0)), cell(2, 1, open(1)), cell(2, 2, mine), cell(2, 3, open(1)), cell(2, 4, open(0))],
-				[cell(3, 0, open(0)), cell(3, 1, open(1)), cell(3, 2, open(1)), cell(3, 3, open(1)), cell(3, 4, open(0))]
+				[
+					cell(1, 0, open(1)),
+					cell(1, 1, open(2)),
+					cell(1, 2, open(1)),
+					cell(1, 3, open(2)),
+					cell(1, 4, open(1))
+				],
+				[
+					cell(2, 0, open(0)),
+					cell(2, 1, open(1)),
+					cell(2, 2, mine),
+					cell(2, 3, open(1)),
+					cell(2, 4, open(0))
+				],
+				[
+					cell(3, 0, open(0)),
+					cell(3, 1, open(1)),
+					cell(3, 2, open(1)),
+					cell(3, 3, open(1)),
+					cell(3, 4, open(0))
+				]
 			]
 		},
 		'1-2-1-stair': {
@@ -62,7 +106,13 @@
 				[cell(0, 0, mine), cell(0, 1), cell(0, 2), cell(0, 3), cell(0, 4)],
 				[cell(1, 0, open(1)), cell(1, 1, open(2)), cell(1, 2), cell(1, 3), cell(1, 4)],
 				[cell(2, 0, open(0)), cell(2, 1, open(1)), cell(2, 2, open(2)), cell(2, 3), cell(2, 4)],
-				[cell(3, 0, open(0)), cell(3, 1, open(0)), cell(3, 2, open(1)), cell(3, 3, mine), cell(3, 4)]
+				[
+					cell(3, 0, open(0)),
+					cell(3, 1, open(0)),
+					cell(3, 2, open(1)),
+					cell(3, 3, mine),
+					cell(3, 4)
+				]
 			]
 		}
 	};
@@ -210,18 +260,14 @@
 
 				<div class="mb-6 space-y-4 text-sm text-sub">
 					<p>
-						In Zsweep, <kbd class="rounded bg-sub/20 px-1 font-bold text-main"
-							>Space</kbd
-						>
-						acts as an <strong>Operator</strong> (like <code>d</code> in Vim). It allows you
-						to flag or chord multiple cells at once by combining it with motions.
+						In Zsweep, <kbd class="rounded bg-sub/20 px-1 font-bold text-main">Space</kbd>
+						acts as an <strong>Operator</strong> (like <code>d</code> in Vim). It allows you to flag or
+						chord multiple cells at once by combining it with motions.
 					</p>
 					<p>
-						To act on multiple cells, place the <strong
-							>count before the operator</strong
-						>
-						(e.g., <code>4 Space l</code>). This prevents latency issues and ensures the
-						action is applied to the full range immediately.
+						To act on multiple cells, place the <strong>count before the operator</strong>
+						(e.g., <code>4 Space l</code>). This prevents latency issues and ensures the action is
+						applied to the full range immediately.
 					</p>
 				</div>
 
@@ -317,49 +363,45 @@
 
 				<div class="space-y-6 text-sub">
 					<div>
-						<h3 class="text-xl font-semibold text-text">
-							3BV (Bechtel’s Board Benchmark Value)
-						</h3>
+						<h3 class="text-xl font-semibold text-text">3BV (Bechtel’s Board Benchmark Value)</h3>
 						<p class="mt-2">
 							3BV measures how complex a Minesweeper board is. It counts the <strong
 								>minimum number of logical actions</strong
 							> needed to solve the board without guessing.
 						</p>
 						<p class="mt-2">
-							Each action that uncovers a safe area or resolves a pattern adds to the
-							board’s 3BV. Boards with higher 3BV are more challenging because they
-							require more planning and careful thinking. Players use 3BV to <strong
-								>compare performance</strong
-							> across different boards and track improvement over time.
+							Each action that uncovers a safe area or resolves a pattern adds to the board’s 3BV.
+							Boards with higher 3BV are more challenging because they require more planning and
+							careful thinking. Players use 3BV to <strong>compare performance</strong> across different
+							boards and track improvement over time.
 						</p>
 					</div>
 
 					<div>
 						<h3 class="text-xl font-semibold text-text">3BV per second (3BV/s)</h3>
 						<p class="mt-2">
-							3BV/s measures how efficiently you solve a board. It divides the board’s
-							3BV by the time it took to finish.
+							3BV/s measures how efficiently you solve a board. It divides the board’s 3BV by the
+							time it took to finish.
 						</p>
 						<p class="mt-2">
 							This helps you see not just <strong>how fast you are</strong>, but also
-							<strong>how efficiently</strong> you are clearing the board. Higher 3BV/s
-							means fewer unnecessary clicks and smarter moves. It’s a simple way to track
-							progress and compare your skills across boards.
+							<strong>how efficiently</strong> you are clearing the board. Higher 3BV/s means fewer unnecessary
+							clicks and smarter moves. It’s a simple way to track progress and compare your skills across
+							boards.
 						</p>
 					</div>
 
 					<div>
 						<h3 class="text-xl font-semibold text-text">Chording</h3>
 						<p class="mt-2">
-							Chording lets you reveal multiple safe cells at once. When a revealed
-							number has the correct number of mines flagged around it, activating
-							that number opens all the remaining safe cells nearby.
+							Chording lets you reveal multiple safe cells at once. When a revealed number has the
+							correct number of mines flagged around it, activating that number opens all the
+							remaining safe cells nearby.
 						</p>
 						<p class="mt-2">
-							Chording can <strong>save time and clicks</strong>, but it only works if
-							your flags are placed correctly. Learning when and how to chord makes
-							your play smoother and more consistent, and it’s essential for improving
-							efficiency on harder boards.
+							Chording can <strong>save time and clicks</strong>, but it only works if your flags
+							are placed correctly. Learning when and how to chord makes your play smoother and more
+							consistent, and it’s essential for improving efficiency on harder boards.
 						</p>
 					</div>
 				</div>
@@ -373,23 +415,22 @@
 
 				<div class="space-y-4 text-sub">
 					<p>
-						Minesweeper started as a logic puzzle game and became widely known through
-						Microsoft Windows in the early 1990s. The original version, <strong
-							>Mined-Out</strong
-						>, was created by Ian Andrew for the ZX Spectrum in 1983. Andrew notes that
-						Microsoft Minesweeper followed the same basic design.
+						Minesweeper started as a logic puzzle game and became widely known through Microsoft
+						Windows in the early 1990s. The original version, <strong>Mined-Out</strong>, was
+						created by Ian Andrew for the ZX Spectrum in 1983. Andrew notes that Microsoft
+						Minesweeper followed the same basic design.
 					</p>
 					<p>
-						The game encourages careful thinking and pattern recognition. Players
-						uncover cells using numerical clues to locate hidden mines, aiming to solve
-						boards without guessing. Over time, Minesweeper evolved into a game of skill
-						and efficiency, where players track speed, accuracy, and board complexity.
+						The game encourages careful thinking and pattern recognition. Players uncover cells
+						using numerical clues to locate hidden mines, aiming to solve boards without guessing.
+						Over time, Minesweeper evolved into a game of skill and efficiency, where players track
+						speed, accuracy, and board complexity.
 					</p>
 					<p>
-						Modern variants, including <span class="font-bold text-main">zsweep</span>,
-						build on these classic mechanics while exploring new interfaces.
-						Keyboard-focused controls and Vim-style navigation make the game faster and
-						more consistent for players who want a streamlined experience.
+						Modern variants, including <span class="font-bold text-main">zsweep</span>, build on
+						these classic mechanics while exploring new interfaces. Keyboard-focused controls and
+						Vim-style navigation make the game faster and more consistent for players who want a
+						streamlined experience.
 					</p>
 				</div>
 			</section>

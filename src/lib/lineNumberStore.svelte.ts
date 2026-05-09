@@ -4,7 +4,7 @@ export type LineNumberMode = 'off' | 'normal' | 'relative' | 'hybrid';
 
 class LineNumberStore {
 	value = $state<LineNumberMode>(
-		browser ? ((localStorage.getItem('zsweep_linenumbers') as LineNumberMode) || 'off') : 'off'
+		browser ? (localStorage.getItem('zsweep_linenumbers') as LineNumberMode) || 'off' : 'off'
 	);
 
 	set(mode: LineNumberMode) {
