@@ -33,7 +33,7 @@
 		restart
 	}: Props = $props();
 
-	let chartCanvas: HTMLCanvasElement = $state();
+	let chartCanvas: HTMLCanvasElement | undefined = $state();
 	let chartInstance: Chart | null = null;
 	let showMap = $state(false);
 

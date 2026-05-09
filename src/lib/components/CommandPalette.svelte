@@ -29,7 +29,7 @@
 	let paletteView: 'root' | 'themes' | 'linenumbers' | 'mineicons' = $state('root');
 	let originalTheme: Theme | null = $state(null);
 	let searchQuery = $state('');
-	let searchInputEl: HTMLInputElement = $state();
+	let searchInputEl: HTMLInputElement | undefined = $state();
 	let selectedIndex = $state(0);
 
 	const LINE_NUMBER_OPTIONS: { id: LineNumberMode; label: string }[] = [

@@ -9,8 +9,8 @@
 	let currentUser: string | null = $state(null);
 
 	// --- CHART ---
-	let chartCanvas: HTMLCanvasElement = $state();
-	let chartInstance: Chart = $state();
+	let chartCanvas: HTMLCanvasElement | undefined = $state();
+	let chartInstance: Chart | undefined = $state();
 
 	const createHistogram = (dataPoints: number[], binSize = 10) => {
 		if (dataPoints.length === 0) return { labels: [], counts: [] };
@@ -36,6 +36,7 @@
 	};
 
 	$effect(() => {
+		if (!chartCanvas) return;
 		const ctx = chartCanvas.getContext('2d');
 		if (!ctx) return;
 
@@ -85,7 +86,7 @@
 			}
 		});
 
-		return () => chartInstance.destroy();
+		return () => chartInstance?.destroy();
 	});
 
 	$effect(() => {
