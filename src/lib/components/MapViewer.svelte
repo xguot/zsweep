@@ -3,8 +3,12 @@
 	import GameGrid from './GameGrid.svelte';
 	import type { Cell } from '$lib/minesweeper';
 
-	export let grid: Cell[][] = [];
-	export let onClose: () => void;
+	interface Props {
+		grid?: Cell[][];
+		onClose: () => void;
+	}
+
+	let { grid = [], onClose }: Props = $props();
 
 	function handleKey(e: KeyboardEvent) {
 		const isEscape = e.key === 'Escape';
@@ -16,13 +20,13 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKey} />
+<svelte:window onkeydown={handleKey} />
 
 <div
 	class="animate-in fade-in fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg/95 backdrop-blur-sm duration-200"
 >
 	<button
-		on:click={onClose}
+		onclick={onClose}
 		class="absolute right-8 top-8 p-2 text-sub transition-colors hover:text-text"
 		aria-label="Close Map"
 	>

@@ -1,36 +1,54 @@
 <script lang="ts">
 	import { Wrench, X } from 'lucide-svelte';
 
-	export let show = false;
-	export let gameMode: 'standard' | 'time' = 'standard';
+	interface ConfigPayload {
+		rows: number;
+		cols: number;
+		mines: number;
+		time: number;
+	}
 
-	export let currentRows = 9;
-	export let currentCols = 9;
-	export let currentMines = 10;
-	export let currentTime = 15;
+	interface Props {
+		show?: boolean;
+		gameMode?: 'standard' | 'time';
+		currentRows?: number;
+		currentCols?: number;
+		currentMines?: number;
+		currentTime?: number;
+		onapply?: (config: ConfigPayload) => void;
+	}
 
-	import { createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
+	let {
+		show = $bindable(false),
+		gameMode = 'standard',
+		currentRows = 9,
+		currentCols = 9,
+		currentMines = 10,
+		currentTime = 15,
+		onapply
+	}: Props = $props();
 
-	let config = {
+	let config = $state({
 		rows: 20,
 		cols: 20,
 		mines: 40,
 		time: 120
-	};
+	});
 
-	$: if (show) {
-		if (gameMode === 'standard') {
-			config.rows = currentRows;
-			config.cols = currentCols;
-			config.mines = currentMines;
-		} else {
-			config.time = currentTime;
+	$effect(() => {
+		if (show) {
+			if (gameMode === 'standard') {
+				config.rows = currentRows;
+				config.cols = currentCols;
+				config.mines = currentMines;
+			} else {
+				config.time = currentTime;
+			}
 		}
-	}
+	});
 
 	function handleApply() {
-		dispatch('apply', config);
+		onapply?.(config);
 		show = false;
 	}
 
@@ -42,7 +60,9 @@
 {#if show}
 	<div
 		class="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm duration-200"
-		on:click|self={close}
+		onclick={(e) => {
+			if (e.target === e.currentTarget) close();
+		}}
 	>
 		<div class="w-full max-w-sm rounded-xl border border-sub/20 bg-bg p-6 shadow-2xl">
 			<div class="mb-6 flex items-center justify-between">
@@ -50,7 +70,7 @@
 					<Wrench size={18} class="text-main" />
 					<span>Custom {gameMode === 'standard' ? 'Grid' : 'Time'}</span>
 				</h2>
-				<button on:click={close} class="text-sub transition-colors hover:text-error">
+				<button onclick={close} class="text-sub transition-colors hover:text-error">
 					<X size={18} />
 				</button>
 			</div>
@@ -109,7 +129,7 @@
 				{/if}
 
 				<button
-					on:click={handleApply}
+					onclick={handleApply}
 					class="mt-2 w-full rounded-lg bg-main py-2.5 text-xs font-bold uppercase tracking-widest text-bg transition-opacity hover:opacity-90"
 				>
 					Apply Settings

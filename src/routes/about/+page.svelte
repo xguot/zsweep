@@ -1,21 +1,17 @@
 <script lang="ts">
-	import { Keyboard, Info, Github, Code2, GitPullRequest, Cpu } from 'lucide-svelte';
-
-	// --- THEME / NAVIGATION ---
-	import { currentTheme } from '$lib/themeStore'; // Light/dark theme state
-
-	// --- SVELTE / THIRD-PARTY ---
 	import { onMount } from 'svelte';
-	import { supabase } from '$lib/supabase'; // Auth + DB
+	import { Keyboard, Info, Github, Code2, GitPullRequest, Cpu } from 'lucide-svelte';
+	import { currentTheme } from '$lib/themeStore.svelte';
+	import { supabase } from '$lib/supabase';
 	import Chart from 'chart.js/auto';
 
-	export let data;
+	let { data } = $props();
 
-	// --- USER STATE ---
+	let currentUser: string | null = $state(null);
 
 	// --- CHART ---
 	let chartCanvas: HTMLCanvasElement;
-	let chartInstance: Chart;
+	let chartInstance: Chart | undefined;
 
 	const createHistogram = (dataPoints: number[], binSize = 10) => {
 		if (dataPoints.length === 0) return { labels: [], counts: [] };
@@ -52,9 +48,10 @@
 
 		const { labels, counts } = createHistogram(validTimes, 10);
 
-		const mainColor = $currentTheme ? `rgb(${$currentTheme.colors.main})` : '#64b5f6';
-		const gridColor = $currentTheme ? `rgba(${$currentTheme.colors.text}, 0.1)` : '#333';
-		const textColor = $currentTheme ? `rgb(${$currentTheme.colors.sub})` : '#888';
+		const theme = currentTheme.value;
+		const mainColor = theme ? `rgb(${theme.colors.main})` : '#64b5f6';
+		const gridColor = theme ? `rgba(${theme.colors.text}, 0.1)` : '#333';
+		const textColor = theme ? `rgb(${theme.colors.sub})` : '#888';
 
 		chartInstance = new Chart(ctx, {
 			type: 'bar',
@@ -89,20 +86,18 @@
 			}
 		});
 
-		return () => chartInstance.destroy();
+		return () => chartInstance?.destroy();
 	});
 
-	$: if (chartInstance && $currentTheme) {
-		const newColor = `rgb(${$currentTheme.colors.main})`;
-		const newGrid = `rgba(${$currentTheme.colors.text}, 0.1)`;
-		const newText = `rgb(${$currentTheme.colors.sub})`;
-
-		chartInstance.data.datasets[0].backgroundColor = newColor;
-		chartInstance.options.scales!.x!.ticks!.color = newText;
-		chartInstance.options.scales!.y!.ticks!.color = newText;
-		chartInstance.options.scales!.y!.grid!.color = newGrid;
+	$effect(() => {
+		if (!chartInstance || !currentTheme.value) return;
+		const theme = currentTheme.value;
+		chartInstance.data.datasets[0].backgroundColor = `rgb(${theme.colors.main})`;
+		chartInstance.options.scales!.x!.ticks!.color = `rgb(${theme.colors.sub})`;
+		chartInstance.options.scales!.y!.ticks!.color = `rgb(${theme.colors.sub})`;
+		chartInstance.options.scales!.y!.grid!.color = `rgba(${theme.colors.text}, 0.1)`;
 		chartInstance.update();
-	}
+	});
 
 	// --- FORMATTING ---
 	const fmtCount = (n: number) => {
@@ -119,14 +114,13 @@
 		return { val: seconds, unit: 'seconds' };
 	};
 
-	$: timeObj = formatTime(data.stats.seconds);
+	let timeObj = $derived(formatTime(data.stats.seconds));
 
 	// --- AUTHENTICATION ---
 	onMount(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
-				currentUser =
-					session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
 			}
 		});
 
@@ -148,14 +142,13 @@
 
 	// --- CONTRIBUTORS FETCH ---
 	type Contributor = { login: string; avatar_url: string; html_url: string };
-	let contributors: Contributor[] = [];
+	let contributors: Contributor[] = $state([]);
 	const GITHUB_TOKEN = ''; // Optional token to avoid rate limits
 
 	onMount(async () => {
+		const headers: Record<string, string> = {};
+		if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
 		try {
-			const headers: Record<string, string> = {};
-			if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
-
 			const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
 				headers
 			});
@@ -185,8 +178,7 @@
 
 			<!-- Total Time Sweeping -->
 			<div class="flex flex-col items-center gap-1">
-				<span
-					class="mb-2 text-[10px] font-bold uppercase tracking-widest text-sub opacity-50"
+				<span class="mb-2 text-[10px] font-bold uppercase tracking-widest text-sub opacity-50"
 					>total time sweeping</span
 				>
 				<div class="flex flex-col items-center leading-none">
@@ -212,10 +204,10 @@
 		<!-- INTRODUCTION -->
 		<div class="space-y-20 text-sm leading-relaxed text-sub">
 			<p class="mb-16 max-w-2xl text-base text-sub">
-				<span class="font-bold text-main">zsweep</span> is a minimalist, keyboard-driven Minesweeper
-				focused on speed and consistency. Play using Vim-style controls, track your performance
-				over time, and see your progress visualized after each session. Clear boards efficiently,
-				reduce mistakes, and improve with practice.
+				<span class="font-bold text-main">zsweep</span> is a minimalist, keyboard-driven Minesweeper focused
+				on speed and consistency. Play using Vim-style controls, track your performance over time, and
+				see your progress visualized after each session. Clear boards efficiently, reduce mistakes, and
+				improve with practice.
 			</p>
 
 			<!-- PHILOSOPHY SECTION -->
@@ -229,10 +221,10 @@
 					Traditional Minesweeper clones rely heavily on mouse inputs, breaking the <span
 						class="font-bold text-text">flow state</span
 					>.
-					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as
-					a keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`,
-					`b`, `{'{'}`, `{'}'}`) and instant feedback, we aim to create the most efficient
-					and satisfying sweeping engine for developers.
+					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as a
+					keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`, `b`, `{'{'}`,
+					`{'}'}`) and instant feedback, we aim to create the most efficient and satisfying sweeping
+					engine for developers.
 				</p>
 			</section>
 
@@ -254,8 +246,7 @@
 						class="flex flex-col gap-2 rounded-lg border border-sub/10 bg-sub/5 p-4 transition-colors hover:border-main/30"
 					>
 						<span class="font-bold text-text">TypeScript</span>
-						<span class="text-xs">Strict typing for game logic and state machines.</span
-						>
+						<span class="text-xs">Strict typing for game logic and state machines.</span>
 					</div>
 					<div
 						class="flex flex-col gap-2 rounded-lg border border-sub/10 bg-sub/5 p-4 transition-colors hover:border-main/30"
@@ -328,8 +319,8 @@
 				</h2>
 
 				<p class="mb-6 text-center text-sm text-sub">
-					Every contribution, from code to ideas, helps make <span
-						class="font-bold text-main">zsweep</span
+					Every contribution, from code to ideas, helps make <span class="font-bold text-main"
+						>zsweep</span
 					> better.
 				</p>
 
@@ -373,9 +364,7 @@
 							<Github size={20} class="transition-transform group-hover:scale-110" />
 							<div class="flex flex-col items-start">
 								<span class="font-bold">GitHub Repository</span>
-								<span class="text-xs text-sub group-hover:text-main"
-									>Star, Fork, & Contribute</span
-								>
+								<span class="text-xs text-sub group-hover:text-main">Star, Fork, & Contribute</span>
 							</div>
 						</a>
 						<a
@@ -386,9 +375,7 @@
 							<Code2 size={20} class="transition-transform group-hover:scale-110" />
 							<div class="flex flex-col items-start">
 								<span class="font-bold">View Roadmap</span>
-								<span class="text-xs text-sub group-hover:text-main"
-									>Help us build v1.1</span
-								>
+								<span class="text-xs text-sub group-hover:text-main">Help us build v1.1</span>
 							</div>
 						</a>
 					</div>

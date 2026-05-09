@@ -1,20 +1,43 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { Asterisk, Skull, Radiation, Flame, Flag, X } from 'lucide-svelte';
 	import type { Cell } from '$lib/minesweeper';
-	import type { LineNumberMode } from '$lib/lineNumberStore';
-	import { mineIcon } from '$lib/mineIconStore';
+	import type { LineNumberMode } from '$lib/lineNumberStore.svelte';
+	import { mineIcon } from '$lib/mineIconStore.svelte';
 
-	export let grid: Cell[][] = [];
-	export let cursor: { r: number; c: number } = { r: 0, c: 0 };
-	export let numCols: number;
-	export let gameState: 'pending' | 'playing' | 'finished' = 'pending';
-	export let vimMode: boolean = false;
-	export let isMouseDown: boolean = false;
-	export let lineNumberMode: LineNumberMode = 'off';
-	export let cellSize: number = 32;
+	interface CellPos {
+		r: number;
+		c: number;
+	}
 
-	const dispatch = createEventDispatcher();
+	interface Props {
+		grid?: Cell[][];
+		cursor?: CellPos;
+		numCols: number;
+		gameState?: 'pending' | 'playing' | 'finished';
+		vimMode?: boolean;
+		isMouseDown?: boolean;
+		lineNumberMode?: LineNumberMode;
+		cellSize?: number;
+		onclick?: (pos: CellPos) => void;
+		onflag?: (pos: CellPos) => void;
+		onhover?: (pos: CellPos) => void;
+		onmousedown?: () => void;
+	}
+
+	let {
+		grid = [],
+		cursor = { r: 0, c: 0 },
+		numCols,
+		gameState = 'pending',
+		vimMode = false,
+		isMouseDown = false,
+		lineNumberMode = 'off',
+		cellSize = 32,
+		onclick,
+		onflag,
+		onhover,
+		onmousedown
+	}: Props = $props();
 
 	const ICONS = {
 		asterisk: Asterisk,
@@ -25,22 +48,28 @@
 
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let longPressHandled = false;
-	let touchFeedback: { r: number; c: number } | null = null;
+	let touchFeedback: { r: number; c: number } | null = $state(null);
 
 	function handleLeftClick(r: number, c: number) {
-		dispatch('click', { r, c });
+		onclick?.({ r, c });
 	}
 
 	function handleRightClick(r: number, c: number) {
-		dispatch('flag', { r, c });
+		onflag?.({ r, c });
 	}
 
 	function handleHover(r: number, c: number) {
-		dispatch('hover', { r, c });
+		onhover?.({ r, c });
 	}
 
 	function handleMouseDown() {
-		dispatch('mousedown');
+		onmousedown?.();
+	}
+
+	function passiveTouchStart(node: HTMLElement, handler: () => void) {
+		const fn = () => handler();
+		node.addEventListener('touchstart', fn, { passive: true });
+		return { destroy: () => node.removeEventListener('touchstart', fn) };
 	}
 
 	function triggerTouchFeedback(r: number, c: number) {
@@ -87,8 +116,8 @@
 <div
 	class="relative select-none bg-bg transition-all duration-300 {vimMode ? 'cursor-none' : ''}"
 	style="touch-action: none;"
-	on:mousedown={handleMouseDown}
-	on:contextmenu|preventDefault
+	onmousedown={handleMouseDown}
+	oncontextmenu={(e) => e.preventDefault()}
 	role="grid"
 	tabindex="-1"
 >
@@ -101,7 +130,10 @@
 						? c + 1
 						: Math.abs(c - cursor.c)
 					: c + 1}
-				<div class="flex h-4 items-center justify-center {c === cursor.c ? 'text-main' : ''}" style="width: {cellSize}px;">
+				<div
+					class="flex h-4 items-center justify-center {c === cursor.c ? 'text-main' : ''}"
+					style="width: {cellSize}px;"
+				>
 					{num}
 				</div>
 			{/each}
@@ -114,7 +146,10 @@
 						? grid.length - r
 						: Math.abs(r - cursor.r)
 					: grid.length - r}
-				<div class="flex w-6 items-center justify-end {r === cursor.r ? 'text-main' : ''}" style="height: {cellSize}px;">
+				<div
+					class="flex w-6 items-center justify-end {r === cursor.r ? 'text-main' : ''}"
+					style="height: {cellSize}px;"
+				>
 					{num}
 				</div>
 			{/each}
@@ -136,19 +171,22 @@
 					{cell.isExploded ? '!border-red-600 !bg-red-600' : ''}
 					{vimMode && cursor.r === r && cursor.c === c ? 'z-10 ring-2 ring-main/50 brightness-110' : ''}
 					{cell.isFlagged ? 'scale-90 bg-sub/20' : 'scale-100'}"
-					style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(10, Math.round(cellSize * 0.44))}px;"
-					on:mousedown={(e) => {
+					style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(
+						10,
+						Math.round(cellSize * 0.44)
+					)}px;"
+					onmousedown={(e) => {
 						if (e.button === 2) handleRightClick(r, c);
 					}}
-					on:dblclick={() => handleRightClick(r, c)}
-					on:mouseup={(e) => {
+					ondblclick={() => handleRightClick(r, c)}
+					onmouseup={(e) => {
 						if (e.button === 0) handleLeftClick(r, c);
 					}}
-					on:touchstart|passive={() => handleTouchStart(r, c)}
-					on:touchend={(e) => handleTouchEnd(e, r, c)}
-					on:touchmove={handleTouchMove}
-					on:contextmenu|preventDefault
-					on:mouseenter={() => handleHover(r, c)}
+					use:passiveTouchStart={() => handleTouchStart(r, c)}
+					ontouchend={(e) => handleTouchEnd(e, r, c)}
+					ontouchmove={handleTouchMove}
+					oncontextmenu={(e) => e.preventDefault()}
+					onmouseenter={() => handleHover(r, c)}
 					aria-label={cell.isOpen
 						? cell.isMine
 							? 'Mine'
@@ -159,11 +197,8 @@
 				>
 					{#if cell.isOpen}
 						{#if cell.isMine}
-							<svelte:component
-								this={ICONS[$mineIcon]}
-								size={iconSize}
-								fill={cell.isExploded ? 'currentColor' : 'none'}
-							/>
+							{@const SvelteComponent = ICONS[mineIcon.value]}
+							<SvelteComponent size={iconSize} fill={cell.isExploded ? 'currentColor' : 'none'} />
 						{:else if cell.neighborCount > 0}
 							<span
 								class={cell.neighborCount === 1
@@ -180,7 +215,11 @@
 					{:else if cell.isFlagged}
 						{#if cell.isWrong}
 							<div class="relative flex items-center justify-center">
-								<Flag size={Math.max(8, iconSize - 4)} fill="currentColor" class="text-error opacity-50" />
+								<Flag
+									size={Math.max(8, iconSize - 4)}
+									fill="currentColor"
+									class="text-error opacity-50"
+								/>
 								<X size={iconSize} class="absolute text-error" />
 							</div>
 						{:else}

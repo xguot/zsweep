@@ -6,22 +6,27 @@
 	import { Bomb, User, LogOut, BookOpen, Info, Palette } from 'lucide-svelte';
 
 	import { supabase } from '$lib/supabase';
-	import { currentTheme } from '$lib/themeStore';
-	import { zenMode } from '$lib/zenStore';
+	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
+	import { zenMode } from '$lib/zenStore.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
 
-	$: isHomePage = $page.url.pathname === '/';
-	$: showZenUI = $zenMode && isHomePage;
+	let { children }: Props = $props();
 
-	let currentUser: string | null = null;
-	let showPalette = false;
+	let isHomePage = $derived($page.url.pathname === '/');
+	let showZenUI = $derived(zenMode.value && isHomePage);
+
+	let currentUser: string | null = $state(null);
+	let showPalette = $state(false);
 	let lastKey = '';
 	let lastKeyTime = 0;
 
-	let seenState = {
+	let seenState = $state({
 		about: true,
 		manual: true
-	};
+	});
 
 	function attemptQuit() {
 		try {
@@ -69,8 +74,7 @@
 				return;
 			} else {
 				const active = document.activeElement;
-				const isInput =
-					active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+				const isInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
 
 				if (!isInput) {
 					e.preventDefault();
@@ -82,19 +86,17 @@
 
 		if (e.key === 'z' && !e.metaKey && !e.ctrlKey && !e.altKey && isHomePage) {
 			const active = document.activeElement;
-			const isInput =
-				active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+			const isInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
 			if (!isInput && !showPalette) {
 				e.preventDefault();
-				$zenMode = !$zenMode;
+				zenMode.toggle();
 				return;
 			}
 		}
 
 		if (e.key === 'Tab') {
 			const active = document.activeElement;
-			const isInput =
-				active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+			const isInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
 
 			if (!isInput && $page.url.pathname !== '/') {
 				e.preventDefault();
@@ -110,19 +112,19 @@
 		}
 	}
 
-	onMount(() => {
-		const aboutSeen = localStorage.getItem('zsweep-seen-about');
-		const manualSeen = localStorage.getItem('zsweep-seen-manual');
+	$effect(() => {
+		applyThemeToRoot(currentTheme.value);
+	});
 
+	onMount(() => {
 		seenState = {
-			about: !!aboutSeen,
-			manual: !!manualSeen
+			about: !!localStorage.getItem('zsweep-seen-about'),
+			manual: !!localStorage.getItem('zsweep-seen-manual')
 		};
 
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
-				currentUser =
-					session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
 			}
 		});
 
@@ -143,7 +145,7 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleGlobalKeydown} />
+<svelte:window onkeydown={handleGlobalKeydown} />
 
 <svelte:head>
 	<title>Zsweep</title>
@@ -194,7 +196,7 @@
 			<div class="flex items-center gap-2">
 				<a
 					href="/about"
-					on:click={() => markAsSeen('about')}
+					onclick={() => markAsSeen('about')}
 					class="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/about'
 						? 'bg-sub/10 text-text'
@@ -208,7 +210,7 @@
 
 				<a
 					href="/help"
-					on:click={() => markAsSeen('manual')}
+					onclick={() => markAsSeen('manual')}
 					class="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/help'
 						? 'bg-sub/10 text-text'
@@ -246,7 +248,7 @@
 							</a>
 							<div class="my-1 h-[1px] bg-sub/10"></div>
 							<button
-								on:click={handleLogout}
+								onclick={handleLogout}
 								class="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sub transition-colors hover:bg-error/10 hover:text-error"
 							>
 								<LogOut size={14} /><span>Sign Out</span>
@@ -266,7 +268,7 @@
 	</header>
 
 	<main class="w-full">
-		<slot />
+		{@render children?.()}
 	</main>
 
 	<CommandPalette bind:show={showPalette} />
@@ -277,12 +279,10 @@
 			: 'opacity-100'}"
 	>
 		<div class="flex w-full select-none justify-between">
-			<div
-				class="flex flex-col gap-2 text-[10px] font-bold tracking-widest text-sub opacity-60"
-			>
+			<div class="flex flex-col gap-2 text-[10px] font-bold tracking-widest text-sub opacity-60">
 				<button
 					class="pointer-events-auto flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-100"
-					on:click={() => ($page.url.pathname === '/' ? location.reload() : goto('/'))}
+					onclick={() => ($page.url.pathname === '/' ? location.reload() : goto('/'))}
 				>
 					<kbd
 						class="flex min-w-[36px] justify-center rounded bg-sub/20 px-1.5 py-0.5 font-mono text-text shadow-sm"
@@ -303,7 +303,7 @@
 
 				<button
 					class="pointer-events-auto flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-100"
-					on:click={() => (showPalette = !showPalette)}
+					onclick={() => (showPalette = !showPalette)}
 				>
 					<kbd
 						class="flex min-w-[36px] justify-center rounded bg-sub/20 px-1.5 py-0.5 font-mono text-text shadow-sm"
@@ -318,7 +318,7 @@
 				class="flex flex-col justify-end text-right text-[10px] font-bold uppercase tracking-widest text-sub opacity-60"
 			>
 				<div class="flex items-center gap-2">
-					<span>{$currentTheme?.label || 'default'}</span>
+					<span>{currentTheme.value?.label || 'default'}</span>
 					<Palette size={10} />
 				</div>
 			</div>

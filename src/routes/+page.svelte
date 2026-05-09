@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import confetti from 'canvas-confetti';
 	import {
 		Grid3x3,
@@ -9,7 +8,7 @@
 		Mail,
 		Github,
 		Twitter,
-        Coffee
+		Coffee
 	} from 'lucide-svelte';
 	import {
 		createGrid,
@@ -28,11 +27,16 @@
 	import ResultView from '$lib/components/ResultView.svelte';
 	import CustomSettingsModal from '$lib/components/CustomSettingsModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
-	import { zenMode } from '$lib/zenStore';
-	import { lineNumbers } from '$lib/lineNumberStore';
+	import { onMount } from 'svelte';
+	import { zenMode } from '$lib/zenStore.svelte';
+	import { lineNumbers } from '$lib/lineNumberStore.svelte';
 
 	import type { PageData } from './$types';
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 
 	const GAME_CONFIG = {
 		gridSizes: [
@@ -43,7 +47,7 @@
 		timeLimits: [15, 30, 60]
 	};
 
-	let game = {
+	let game = $state({
 		mode: 'standard' as 'time' | 'standard',
 		size: GAME_CONFIG.gridSizes[0],
 		timeLimit: 15,
@@ -53,9 +57,9 @@
 		timer: 0,
 		timerInterval: undefined as ReturnType<typeof setInterval> | undefined,
 		isFirstClick: true
-	};
+	});
 
-	let input = {
+	let input = $state({
 		cursor: { r: 0, c: 0 },
 		buffer: '',
 		lastKey: '',
@@ -64,22 +68,22 @@
 		vimMode: false,
 		operator: null as 'SMART' | 'FLAG' | 'REVEAL' | null,
 		operatorCount: 1
-	};
+	});
 
-	let search = {
+	let search = $state({
 		active: false,
 		term: '',
 		matches: [] as { r: number; c: number }[],
 		matchIndex: -1
-	};
+	});
 
-	let ui = {
+	let ui = $state({
 		showCustomModal: false
-	};
+	});
 
-	let showTutorial = false;
+	let showTutorial = $state(false);
 
-	let stats = {
+	let stats = $state({
 		clicks: 0,
 		clicksThisSecond: 0,
 		history: [] as number[],
@@ -90,26 +94,28 @@
 		sessionTotalMines: 0,
 		sessionErrors: 0,
 		finalAccuracy: 0
-	};
+	});
 
 	let currentUser: string | null = null;
 
-	let windowWidth = 0;
-	let windowHeight = 0;
+	let windowWidth = $state(0);
+	let windowHeight = $state(0);
 
-	$: cellSize = (() => {
-		if (!windowWidth) return 32;
-		const cols = game.size.cols;
-		const rows = game.size.rows;
-		const gap = 4;
-		const hPad = 64;
-		const vPad = 260; // top UI + footer breathing room
-		const availW = windowWidth - hPad;
-		const availH = windowHeight - vPad;
-		const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
-		const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
-		return Math.max(20, Math.min(32, maxW, maxH));
-	})();
+	let cellSize = $derived(
+		(() => {
+			if (!windowWidth) return 32;
+			const cols = game.size.cols;
+			const rows = game.size.rows;
+			const gap = 4;
+			const hPad = 64;
+			const vPad = 260; // top UI + footer breathing room
+			const availW = windowWidth - hPad;
+			const availH = windowHeight - vPad;
+			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
+			const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
+			return Math.max(20, Math.min(32, maxW, maxH));
+		})()
+	);
 
 	function openCustomModal() {
 		ui.showCustomModal = true;
@@ -120,9 +126,12 @@
 		localStorage.setItem('zsweep-visited', 'true');
 	}
 
-	function applyCustomSettings(event: CustomEvent) {
-		const config = event.detail;
-
+	function applyCustomSettings(config: {
+		rows: number;
+		cols: number;
+		mines: number;
+		time: number;
+	}) {
 		if (game.mode === 'standard') {
 			const r = Math.max(5, Math.min(50, config.rows));
 			const c = Math.max(5, Math.min(50, config.cols));
@@ -278,8 +287,7 @@
 		}
 
 		const canChord =
-			game.grid[r][c].isOpen &&
-			countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
+			game.grid[r][c].isOpen && countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
 
 		const result = canChord ? revealCellsAround(game.grid, r, c) : revealCell(game.grid, r, c);
 
@@ -316,11 +324,7 @@
 			DIRECTIONS.forEach(([dr, dc]) => {
 				const nr = r + dr,
 					nc = c + dc;
-				if (
-					game.grid[nr]?.[nc] &&
-					!game.grid[nr][nc].isOpen &&
-					!game.grid[nr][nc].isFlagged
-				) {
+				if (game.grid[nr]?.[nc] && !game.grid[nr][nc].isOpen && !game.grid[nr][nc].isFlagged) {
 					handleClick(nr, nc);
 				}
 			});
@@ -457,8 +461,7 @@
 				return;
 			}
 			if (action.type === 'PREV_MATCH' && search.matches.length > 0) {
-				search.matchIndex =
-					(search.matchIndex - 1 + search.matches.length) % search.matches.length;
+				search.matchIndex = (search.matchIndex - 1 + search.matches.length) % search.matches.length;
 				input.cursor = search.matches[search.matchIndex];
 				return;
 			}
@@ -530,9 +533,7 @@
 		if (stats.sessionTotalMines === 0) return 0;
 		return Math.max(
 			0,
-			Math.round(
-				((stats.sessionTotalMines - stats.sessionErrors) / stats.sessionTotalMines) * 100
-			)
+			Math.round(((stats.sessionTotalMines - stats.sessionErrors) / stats.sessionTotalMines) * 100)
 		);
 	}
 
@@ -624,11 +625,15 @@
 	<title>Zsweep</title>
 </svelte:head>
 
-<svelte:document on:keydown={handleInput} />
-<svelte:window on:mouseup={() => (input.isMouseDown = false)} bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
+<svelte:document onkeydown={handleInput} />
+<svelte:window
+	onmouseup={() => (input.isMouseDown = false)}
+	bind:innerWidth={windowWidth}
+	bind:innerHeight={windowHeight}
+/>
 
 <div
-	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {$zenMode
+	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
 		? 'fixed inset-0 justify-center'
 		: ''}"
 >
@@ -652,7 +657,7 @@
 	{:else}
 		<div
 			class="mb-8 flex select-none items-center gap-6 rounded-lg bg-sub/10 px-4 py-2 text-xs transition-all duration-300 {game.state ===
-				'playing' || $zenMode
+				'playing' || zenMode.value
 				? 'pointer-events-none opacity-0'
 				: 'opacity-100'}"
 		>
@@ -661,7 +666,7 @@
 					class="flex items-center gap-2 transition-colors {game.mode === 'standard'
 						? 'font-bold text-main'
 						: 'text-sub hover:text-text'}"
-					on:click={() => setMode('standard')}
+					onclick={() => setMode('standard')}
 				>
 					<InfinityIcon size={12} /><span>standard</span>
 				</button>
@@ -669,7 +674,7 @@
 					class="flex items-center gap-2 transition-colors {game.mode === 'time'
 						? 'font-bold text-main'
 						: 'text-sub hover:text-text'}"
-					on:click={() => setMode('time')}
+					onclick={() => setMode('time')}
 				>
 					<Hourglass size={12} /><span>time</span>
 				</button>
@@ -685,17 +690,15 @@
 							class={game.size.label === size.label
 								? 'font-bold text-main'
 								: 'text-sub hover:text-text'}
-							on:click={() => setSize(size)}>{size.label}</button
+							onclick={() => setSize(size)}>{size.label}</button
 						>
 					{/each}
 				{:else}
 					<Hourglass size={12} class="text-sub opacity-50" />
 					{#each GAME_CONFIG.timeLimits as t}
 						<button
-							class={game.timeLimit === t
-								? 'font-bold text-main'
-								: 'text-sub hover:text-text'}
-							on:click={() => setTime(t)}>{t}s</button
+							class={game.timeLimit === t ? 'font-bold text-main' : 'text-sub hover:text-text'}
+							onclick={() => setTime(t)}>{t}s</button
 						>
 					{/each}
 				{/if}
@@ -704,7 +707,7 @@
 
 				<button
 					class="text-sub transition-colors hover:text-main"
-					on:click={openCustomModal}
+					onclick={openCustomModal}
 					title="Custom Settings"
 				>
 					<Wrench size={12} />
@@ -713,7 +716,7 @@
 		</div>
 
 		<div
-			class="animate-in fade-in flex flex-col gap-2 duration-300 {$zenMode
+			class="animate-in fade-in flex flex-col gap-2 duration-300 {zenMode.value
 				? 'scale-110'
 				: 'scale-100'}"
 			style="transition: transform 500ms ease-in-out;"
@@ -736,15 +739,15 @@
 				gameState={game.state}
 				vimMode={input.vimMode}
 				isMouseDown={input.isMouseDown}
-				lineNumberMode={$lineNumbers}
+				lineNumberMode={lineNumbers.value}
 				{cellSize}
-				on:click={(e) => handleClick(e.detail.r, e.detail.c)}
-				on:flag={(e) => toggleFlag(e.detail.r, e.detail.c)}
-				on:hover={(e) => {
-					input.cursor = e.detail;
+				onclick={(e) => handleClick(e.r, e.c)}
+				onflag={(e) => toggleFlag(e.r, e.c)}
+				onhover={(e) => {
+					input.cursor = e;
 					input.vimMode = false;
 				}}
-				on:mousedown={() => {
+				onmousedown={() => {
 					if (game.state === 'playing') input.isMouseDown = true;
 					input.vimMode = false;
 				}}
@@ -759,11 +762,11 @@
 		currentCols={game.size.cols}
 		currentMines={game.size.mines}
 		currentTime={game.timeLimit}
-		on:apply={applyCustomSettings}
+		onapply={applyCustomSettings}
 	/>
 
 	{#if showTutorial}
-		<TutorialModal on:close={closeTutorial} />
+		<TutorialModal onclose={closeTutorial} />
 	{/if}
 
 	{#if search.active}
@@ -781,7 +784,7 @@
 	{/if}
 
 	<footer
-		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-20 text-xs text-sub transition-all duration-300 {$zenMode
+		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-20 text-xs text-sub transition-all duration-300 {zenMode.value
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
@@ -815,10 +818,10 @@
 			</a>
 		</div>
 
-        <div class="flex items-center gap-2 opacity-40">
-            <span>Coded with</span>
-            <Coffee size={12} />
-            <span>by xguot</span>
-        </div>
+		<div class="flex items-center gap-2 opacity-40">
+			<span>Coded with</span>
+			<Coffee size={12} />
+			<span>by xguot</span>
+		</div>
 	</footer>
 </div>
