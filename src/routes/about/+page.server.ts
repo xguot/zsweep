@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { fetchAllRows } from '$lib/fetchAllRows';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, fetch }) => {
 	const { count: started } = await supabase
@@ -16,11 +17,26 @@ export const load: PageServerLoad = async ({ locals: { supabase }, fetch }) => {
 		console.error('RPC Error:', rpcError);
 	}
 
-	const { data: history } = await supabase
-		.from('game_results')
-		.select('time, win, mode, created_at')
-		.order('created_at', { ascending: false })
-		.limit(500);
+	let history: {
+		time: number;
+		win: boolean;
+		mode: string;
+		created_at: string;
+	}[] = [];
+	try {
+		history = await fetchAllRows(
+			(from, to) =>
+				supabase
+					.from('game_results')
+					.select('time, win, mode, created_at')
+					.order('created_at', { ascending: false })
+					.order('id', { ascending: false })
+					.range(from, to),
+			started ?? undefined
+		);
+	} catch (e) {
+		console.error('Failed to fetch game results', e);
+	}
 
 	let contributors = [];
 	try {
@@ -37,7 +53,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, fetch }) => {
 			started: started || 0,
 			completed: completed || 0,
 			seconds: totalSeconds || 0,
-			game_results: history || []
+			game_results: history
 		},
 		contributors: contributors || []
 	};
