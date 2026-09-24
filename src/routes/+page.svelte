@@ -144,7 +144,7 @@
 		if (game.mode === 'standard') {
 			const r = Math.max(5, Math.min(50, config.rows));
 			const c = Math.max(5, Math.min(50, config.cols));
-			const maxMines = Math.floor(r * c * 0.85);
+			const maxMines = Math.min(Math.floor(r * c * 0.85), r * c - 9);
 			const m = Math.max(1, Math.min(maxMines, config.mines));
 			game.size = { label: 'Custom', rows: r, cols: c, mines: m };
 		} else {
