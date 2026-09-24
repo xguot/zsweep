@@ -15,12 +15,14 @@
 		const isCtrlKey = e.ctrlKey && (e.key === '[' || e.key === 'c');
 
 		if (isEscape || isCtrlKey) {
+			e.preventDefault();
+			e.stopPropagation();
 			onClose();
 		}
 	}
 </script>
 
-<svelte:window onkeydown={handleKey} />
+<svelte:window onkeydowncapture={handleKey} />
 
 <div
 	class="animate-in fade-in fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg/95 backdrop-blur-sm duration-200"
