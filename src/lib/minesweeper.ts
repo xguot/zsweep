@@ -78,6 +78,13 @@ export function placeMines(
 		safeZone.add(idx(nr, nc, cols));
 	});
 
+	const availableCells = rows * cols - safeZone.size;
+	if (mines > availableCells) {
+		throw new Error(
+			`Cannot place ${mines} mines: only ${availableCells} cells available outside the safe zone`
+		);
+	}
+
 	let minesPlaced = 0;
 	while (minesPlaced < mines) {
 		const r = Math.floor(Math.random() * rows);
