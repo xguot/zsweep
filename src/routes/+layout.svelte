@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
@@ -26,7 +27,9 @@
 	function attemptQuit() {
 		try {
 			window.close();
-		} catch {}
+		} catch {
+			// fall back to navigating away if closing is blocked.
+		}
 		if (!window.closed) {
 			window.location.href = 'https://start.duckduckgo.com';
 		}
@@ -94,7 +97,7 @@
 
 			if (!isInput && $page.url.pathname !== '/') {
 				e.preventDefault();
-				goto('/');
+				goto(resolve('/'));
 			}
 		}
 	}
@@ -146,7 +149,7 @@
 	>
 		<div class="flex items-center gap-5">
 			<a
-				href="/"
+				href={resolve('/')}
 				class="group flex select-none items-center gap-3 transition-opacity hover:opacity-80"
 			>
 				<svg
@@ -177,7 +180,7 @@
 
 			<nav class="flex items-center gap-1.5">
 				<a
-					href="/about"
+					href={resolve('/about')}
 					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/about'
 						? 'bg-sub/10 text-main'
@@ -188,7 +191,7 @@
 				</a>
 
 				<a
-					href="/help"
+					href={resolve('/help')}
 					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/help'
 						? 'bg-sub/10 text-main'
@@ -199,7 +202,7 @@
 				</a>
 
 				<a
-					href="/profile"
+					href={resolve('/profile')}
 					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/profile'
 						? 'bg-sub/10 text-main'
@@ -215,7 +218,7 @@
 			{#if currentUser}
 				<div class="group relative z-20">
 					<a
-						href="/profile"
+						href={resolve('/profile')}
 						title="Go to Dashboard"
 						class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sub transition-all hover:bg-sub/10 hover:text-text {$page
 							.url.pathname === '/profile'
@@ -232,7 +235,7 @@
 							class="flex min-w-[160px] flex-col rounded-lg border border-sub/20 bg-bg p-1 font-mono text-xs shadow-xl"
 						>
 							<a
-								href="/profile"
+								href={resolve('/profile')}
 								class="flex items-center gap-2 rounded px-3 py-2 text-sub transition-colors hover:bg-sub/10 hover:text-text"
 							>
 								<BarChart2 size={14} /><span>dashboard</span>
@@ -249,7 +252,7 @@
 				</div>
 			{:else}
 				<a
-					href="/login"
+					href={resolve('/login')}
 					class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-bold text-sub transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/login'
 						? 'text-main'
@@ -278,7 +281,7 @@
 			<div class="flex flex-col gap-2 text-[10px] font-bold tracking-widest text-sub opacity-60">
 				<button
 					class="pointer-events-auto flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-100"
-					onclick={() => ($page.url.pathname === '/' ? location.reload() : goto('/'))}
+					onclick={() => ($page.url.pathname === '/' ? location.reload() : goto(resolve('/')))}
 				>
 					<kbd
 						class="flex min-w-[36px] justify-center rounded bg-sub/20 px-1.5 py-0.5 font-mono text-text shadow-sm"

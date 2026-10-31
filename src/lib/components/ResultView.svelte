@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Cell } from '$lib/minesweeper';
 	import Chart from 'chart.js/auto';
 	import { onMount } from 'svelte';
 	import { Eye, RotateCcw } from 'lucide-svelte';
@@ -11,7 +12,7 @@
 		totalMines?: number;
 		totalClicks?: number;
 		history?: number[];
-		finalGrid?: any[][];
+		finalGrid?: Cell[][];
 		accuracy?: number;
 		sizeLabel?: string;
 		gridsSolved?: number;

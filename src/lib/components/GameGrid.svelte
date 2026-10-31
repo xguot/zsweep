@@ -123,7 +123,7 @@
 >
 	{#if lineNumberMode !== 'off'}
 		<div class="absolute -bottom-5 left-0 flex gap-1 text-center text-[10px] text-sub/50">
-			{#each Array(numCols) as _, c}
+			{#each Array.from({ length: numCols }, (_, c) => c) as c (c)}
 				{@const isRelative = lineNumberMode === 'relative' || lineNumberMode === 'hybrid'}
 				{@const num = isRelative
 					? c === cursor.c && lineNumberMode === 'hybrid'
@@ -139,7 +139,7 @@
 			{/each}
 		</div>
 		<div class="absolute -left-7 top-0 flex flex-col gap-1 text-right text-[10px] text-sub/50">
-			{#each grid as _, r}
+			{#each Array.from({ length: grid.length }, (_, r) => r) as r (r)}
 				{@const isRelative = lineNumberMode === 'relative' || lineNumberMode === 'hybrid'}
 				{@const num = isRelative
 					? r === cursor.r && lineNumberMode === 'hybrid'

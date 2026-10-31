@@ -300,7 +300,7 @@
 				>
 					{#each contributors as c (c.login)}
 						<a
-							href={c.html_url}
+							href={`https://github.com/${c.login}`}
 							target="_blank"
 							class="flex flex-col items-center text-xs text-sub hover:text-main"
 						>

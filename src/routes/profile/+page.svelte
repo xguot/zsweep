@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import {
 		supabase,
 		ensureUserProfile,
@@ -393,7 +394,7 @@
 						devices.
 					</span>
 					<a
-						href="/login"
+						href={resolve('/login')}
 						class="flex items-center gap-1.5 rounded bg-main px-3 py-1.5 font-bold text-bg transition-opacity hover:opacity-90"
 					>
 						<LogIn size={13} />
