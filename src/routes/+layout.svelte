@@ -17,6 +17,7 @@
 	let { children }: Props = $props();
 
 	let isHomePage = $derived($page.url.pathname === '/');
+	let isAnticheatPage = $derived($page.url.pathname === '/anticheat');
 	let showZenUI = $derived(zenMode.value && isHomePage);
 
 	let currentUser: string | null = $state(null);
@@ -95,7 +96,7 @@
 			const active = document.activeElement;
 			const isInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
 
-			if (!isInput && $page.url.pathname !== '/') {
+			if (!isInput && !isHomePage && !isAnticheatPage) {
 				e.preventDefault();
 				goto(resolve('/'));
 			}
@@ -147,6 +148,8 @@
 		: 'pb-20'}"
 >
 	<header
+		class:flex-wrap={isAnticheatPage}
+		class:gap-y-3={isAnticheatPage}
 		class="flex w-full items-center justify-between px-6 py-7 transition-opacity duration-300 {showZenUI
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
@@ -277,6 +280,7 @@
 	<CommandPalette bind:show={showPalette} />
 
 	<div
+		hidden={isAnticheatPage}
 		class="pointer-events-none fixed bottom-6 left-0 right-0 z-50 px-6 transition-opacity duration-300 {showZenUI
 			? 'opacity-0'
 			: 'opacity-100'}"

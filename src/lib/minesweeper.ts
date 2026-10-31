@@ -69,7 +69,8 @@ export function createGrid(rows: number, cols: number): Cell[][] {
 export function placeMines(
 	grid: Cell[][],
 	mines: number,
-	firstClick: { r: number; c: number }
+	firstClick: { r: number; c: number },
+	random: () => number = Math.random
 ): void {
 	const rows = grid.length;
 	const cols = grid[0].length;
@@ -89,8 +90,8 @@ export function placeMines(
 
 	let minesPlaced = 0;
 	while (minesPlaced < mines) {
-		const r = Math.floor(Math.random() * rows);
-		const c = Math.floor(Math.random() * cols);
+		const r = Math.floor(random() * rows);
+		const c = Math.floor(random() * cols);
 
 		if (grid[r][c].isMine || safeZone.has(idx(r, c, cols))) {
 			continue;
