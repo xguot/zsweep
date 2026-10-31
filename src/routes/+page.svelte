@@ -766,7 +766,7 @@
 			<div class="flex items-center gap-3">
 				{#if game.mode === 'standard'}
 					<Grid3x3 size={12} class="text-sub opacity-50" />
-					{#each GAME_CONFIG.gridSizes as size}
+					{#each GAME_CONFIG.gridSizes as size (size.label)}
 						<button
 							class={game.size.label === size.label
 								? 'font-bold text-main'
@@ -776,7 +776,7 @@
 					{/each}
 				{:else}
 					<Hourglass size={12} class="text-sub opacity-50" />
-					{#each GAME_CONFIG.timeLimits as t}
+					{#each GAME_CONFIG.timeLimits as t (t)}
 						<button
 							class={game.timeLimit === t ? 'font-bold text-main' : 'text-sub hover:text-text'}
 							onclick={() => setTime(t)}>{t}s</button

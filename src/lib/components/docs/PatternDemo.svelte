@@ -1,8 +1,9 @@
 <script lang="ts">
+	import type { Cell } from '$lib/minesweeper';
 	import GameGrid from '$lib/components/GameGrid.svelte';
 
 	interface Props {
-		grid: any[][];
+		grid: Cell[][];
 		cols: number;
 		title: string;
 		desc: string;

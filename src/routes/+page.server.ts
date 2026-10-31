@@ -1,30 +1,6 @@
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals: { supabase }, cookies }) => {
-	const {
-		data: { session }
-	} = await supabase.auth.getSession();
-	const user = session?.user;
-
-	let showTutorial = false;
-
-	if (user) {
-		const { count, error } = await supabase
-			.from('game_results')
-			.select('*', { count: 'exact', head: true })
-			.eq('user_id', user.id);
-
-		if (!error && count === 0) {
-			showTutorial = true;
-		}
-	} else {
-		const hasVisited = cookies.get('zsweep-visited');
-
-		if (!hasVisited) {
-			showTutorial = true;
-		}
-	}
-
+export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const { data: totalSeconds, error: totalSecondsError } =
 		await supabase.rpc('get_total_sweeping_time');
 

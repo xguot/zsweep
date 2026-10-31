@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { Check, LogIn, UserPlus } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { supabase, ensureUserProfile } from '$lib/supabase';
@@ -67,7 +68,7 @@
 			if (data?.user) {
 				await ensureUserProfile(data.user);
 			}
-			goto('/profile');
+			goto(resolve('/profile'));
 		}
 	}
 

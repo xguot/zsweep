@@ -217,11 +217,11 @@
 				</div>
 
 				<div class="grid gap-4 sm:grid-cols-2">
-					{#each shortcuts as item}
+					{#each shortcuts as item (item.desc)}
 						<div class="flex items-center justify-between rounded bg-sub/5 px-4 py-3">
 							<span class="text-sm text-sub">{item.desc}</span>
 							<div class="flex gap-1">
-								{#each item.keys as key}
+								{#each item.keys as key (key)}
 									<kbd
 										class="min-w-[24px] rounded bg-sub/20 px-2 py-0.5 text-center font-bold text-text shadow-sm"
 										>{key}</kbd
@@ -247,11 +247,11 @@
 				</p>
 
 				<div class="grid gap-4 sm:grid-cols-2">
-					{#each motions as item}
+					{#each motions as item (item.desc)}
 						<div class="flex items-center justify-between rounded bg-sub/5 px-4 py-3">
 							<span class="text-sm text-sub">{item.desc}</span>
 							<div class="flex gap-1">
-								{#each item.keys as key}
+								{#each item.keys as key (key)}
 									<kbd
 										class="min-w-[24px] rounded bg-sub/20 px-2 py-0.5 text-center font-bold text-main shadow-sm"
 										>{key}</kbd
@@ -281,12 +281,12 @@
 				</div>
 
 				<div class="grid gap-4">
-					{#each operators as item}
+					{#each operators as item (item.desc)}
 						<div
 							class="flex flex-col gap-2 rounded bg-sub/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="flex items-center gap-2">
-								{#each item.combo as key}
+								{#each item.combo as key, i (i)}
 									<kbd
 										class="min-w-[28px] rounded bg-sub/20 px-2 py-1 text-center font-bold text-text shadow-sm"
 										>{key}</kbd

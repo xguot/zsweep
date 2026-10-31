@@ -141,7 +141,9 @@
 	function attemptQuit() {
 		try {
 			window.close();
-		} catch {}
+		} catch {
+			// fall back to navigating away if closing is blocked.
+		}
 		if (!window.closed) {
 			window.location.href = 'https://start.duckduckgo.com';
 		}
@@ -188,19 +190,19 @@
 		}
 	}
 
-	function executeSelection(item: any) {
+	function executeSelection(item: Theme | { id: string; action?: () => void } | undefined) {
 		if (!item) return;
 
-		if (paletteView === 'root') {
-			item.action();
+		if (paletteView === 'root' && 'action' in item) {
+			item.action?.();
 		} else if (paletteView === 'themes') {
 			originalTheme = null;
 			currentTheme.set(item as Theme);
 			close();
-		} else if (paletteView === 'linenumbers') {
+		} else if (paletteView === 'linenumbers' && 'id' in item) {
 			lineNumbers.set(item.id as LineNumberMode);
 			close();
-		} else if (paletteView === 'mineicons') {
+		} else if (paletteView === 'mineicons' && 'id' in item) {
 			mineIcon.set(item.id as MineIcon);
 			close();
 		}
@@ -256,7 +258,7 @@
 				{#if currentItems.length === 0}
 					<div class="p-4 text-center text-xs text-sub/50">No results found.</div>
 				{:else}
-					{#each currentItems as item, i}
+					{#each currentItems as item, i ('id' in item ? item.id : item.name)}
 						<button
 							class="group flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition-colors
 							{i === selectedIndex ? 'bg-sub/20 text-text' : 'text-sub hover:bg-sub/10 hover:text-text'}"
@@ -280,7 +282,7 @@
 								{@const theme = item as Theme}
 								<div class="flex items-center gap-3">
 									<div class="flex items-center gap-0.5">
-										{#each [theme.colors.bg, theme.colors.main, theme.colors.sub] as color}
+										{#each [theme.colors.bg, theme.colors.main, theme.colors.sub] as color, i (i)}
 											<span
 												class="h-2.5 w-2.5 rounded-full border border-white/10"
 												style="background-color: rgb({color})"
