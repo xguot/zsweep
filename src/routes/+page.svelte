@@ -22,7 +22,12 @@
 	} from '$lib/minesweeper';
 
 	import { supabase, ensureUserProfile, saveLocalGameResult } from '$lib/supabase';
-	import { handleVimKey, calculateVimJump, calculateVimGJump } from '$lib/game/input/vim';
+	import {
+		handleVimKey,
+		calculateVimJump,
+		calculateVimGJump,
+		calculateVimFind
+	} from '$lib/game/input/vim';
 
 	import GameGrid from '$lib/components/GameGrid.svelte';
 	import ResultView from '$lib/components/ResultView.svelte';
@@ -117,11 +122,11 @@
 			if (input.operator) {
 				const opLabel =
 					input.operatorKey ||
-					(input.operator === 'FLAG' ? 'f' : input.operator === 'REVEAL' ? 'c' : '␣');
+					(input.operator === 'FLAG' ? 'd' : input.operator === 'REVEAL' ? 'c' : '␣');
 				parts.push(`${input.operatorCount > 1 ? input.operatorCount : ''}${opLabel}`);
 			}
 			if (input.buffer) parts.push(input.buffer);
-			if (input.lastKey === 'g') parts.push('g');
+			if (input.lastKey) parts.push(input.lastKey);
 			return parts.join('');
 		})()
 	);
@@ -380,6 +385,15 @@
 		input.operatorCount = 1;
 	}
 
+	function cancelFind() {
+		if (input.lastKey !== 'f' && input.lastKey !== 'F') return;
+		input.lastKey = '';
+		input.buffer = '';
+		input.operator = null;
+		input.operatorKey = '';
+		input.operatorCount = 1;
+	}
+
 	function handleInput(e: KeyboardEvent) {
 		const isEscapeCombo = e.key === 'Escape' || (e.ctrlKey && (e.key === '[' || e.key === 'c'));
 
@@ -429,8 +443,40 @@
 
 		if (game.state === 'finished') return;
 
+		if (
+			(input.lastKey === 'f' || input.lastKey === 'F') &&
+			Date.now() - input.lastKeyTime >= 1000
+		) {
+			cancelFind();
+		}
+
 		const currentMult = input.buffer.length > 0 ? parseInt(input.buffer, 10) : 1;
 		const totalMult = input.operator ? input.operatorCount * currentMult : currentMult;
+
+		if ((input.lastKey === 'f' || input.lastKey === 'F') && Date.now() - input.lastKeyTime < 1000) {
+			if (e.key === 'Shift') return;
+			e.preventDefault();
+			e.stopPropagation();
+			const dest = calculateVimFind(input.lastKey, e.key, totalMult, input.cursor, game.grid);
+			input.lastKey = '';
+			if (dest && input.operator) executeOperatorRange(dest);
+			else if (dest) input.cursor = dest;
+			else {
+				input.operator = null;
+				input.operatorKey = '';
+				input.operatorCount = 1;
+			}
+			input.buffer = '';
+			return;
+		}
+
+		if (e.key === 'f' || e.key === 'F') {
+			e.preventDefault();
+			input.vimMode = true;
+			input.lastKey = e.key;
+			input.lastKeyTime = Date.now();
+			return;
+		}
 
 		// Handle g-prefixed multi-key motions (gg, ge, g_, gm)
 		const now = Date.now();
@@ -840,10 +886,12 @@
 				onclick={(e) => handleClick(e.r, e.c)}
 				onflag={(e) => toggleFlag(e.r, e.c)}
 				onhover={(e) => {
+					cancelFind();
 					input.cursor = e;
 					input.vimMode = false;
 				}}
 				onmousedown={() => {
+					cancelFind();
 					if (game.state === 'playing') input.isMouseDown = true;
 					input.vimMode = false;
 				}}

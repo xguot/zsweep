@@ -99,7 +99,6 @@ export function handleVimKey(key: string): VimAction {
 		case 'Enter':
 			return { type: 'REVEAL' };
 		case 'x':
-		case 'f':
 			return { type: 'FLAG' };
 		case ' ':
 		case 'a':
@@ -112,6 +111,26 @@ export function handleVimKey(key: string): VimAction {
 		default:
 			return null;
 	}
+}
+
+export function calculateVimFind(
+	key: string,
+	digit: string,
+	count: number,
+	cursor: { r: number; c: number },
+	grid: Cell[][]
+): { r: number; c: number } | null {
+	if (!/^[0-8]$/.test(digit)) return null;
+	const row = grid[cursor.r];
+	if (!row) return null;
+	const direction = key === 'f' ? 1 : -1;
+	let remaining = count;
+	for (let c = cursor.c + direction; c >= 0 && c < row.length; c += direction) {
+		if (row[c].isOpen && row[c].neighborCount === Number(digit) && --remaining === 0) {
+			return { r: cursor.r, c };
+		}
+	}
+	return null;
 }
 
 /**
