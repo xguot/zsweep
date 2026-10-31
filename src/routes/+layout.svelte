@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Bomb, User, LogOut, BookOpen, Info, Palette } from 'lucide-svelte';
+	import { User, LogOut, BookOpen, Info, Palette, BarChart2 } from 'lucide-svelte';
 
 	import { supabase } from '$lib/supabase';
 	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
@@ -22,11 +22,6 @@
 	let showPalette = $state(false);
 	let lastKey = '';
 	let lastKeyTime = 0;
-
-	let seenState = $state({
-		about: true,
-		manual: true
-	});
 
 	function attemptQuit() {
 		try {
@@ -62,7 +57,6 @@
 			}
 			lastKeyTime = now;
 		} else {
-			// Reset sequence if Shift isn't held or other keys pressed
 			if (e.key !== 'Shift') lastKey = '';
 		}
 
@@ -105,23 +99,11 @@
 		}
 	}
 
-	function markAsSeen(key: 'about' | 'manual') {
-		if (!seenState[key]) {
-			seenState[key] = true;
-			localStorage.setItem(`zsweep-seen-${key}`, 'true');
-		}
-	}
-
 	$effect(() => {
 		applyThemeToRoot(currentTheme.value);
 	});
 
 	onMount(() => {
-		seenState = {
-			about: !!localStorage.getItem('zsweep-seen-about'),
-			manual: !!localStorage.getItem('zsweep-seen-manual')
-		};
-
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
 				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
@@ -158,7 +140,7 @@
 
 <div class="relative min-h-screen bg-bg pb-20 font-mono text-text transition-colors duration-300">
 	<header
-		class="flex w-full items-center justify-between p-8 transition-opacity duration-300 {showZenUI
+		class="flex w-full items-center justify-between px-6 py-7 transition-opacity duration-300 {showZenUI
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
@@ -193,65 +175,74 @@
 				</div>
 			</a>
 
-			<div class="flex items-center gap-2">
+			<nav class="flex items-center gap-1.5">
 				<a
 					href="/about"
-					onclick={() => markAsSeen('about')}
-					class="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-sub/10 hover:text-text {$page
+					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/about'
-						? 'bg-sub/10 text-text'
-						: !seenState.about
-							? 'animate-pulse text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]'
-							: 'text-sub'}"
-					title="About"
+						? 'bg-sub/10 text-main'
+						: 'text-sub'}"
+					title="About & Global Stats"
 				>
-					<Info size={22} />
+					<Info size={19} />
 				</a>
 
 				<a
 					href="/help"
-					onclick={() => markAsSeen('manual')}
-					class="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-sub/10 hover:text-text {$page
+					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
 						.url.pathname === '/help'
-						? 'bg-sub/10 text-text'
-						: !seenState.manual
-							? 'animate-pulse text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]'
-							: 'text-sub'}"
-					title="Manual / Help"
+						? 'bg-sub/10 text-main'
+						: 'text-sub'}"
+					title="Manual / Vim Guide"
 				>
-					<BookOpen size={22} />
+					<BookOpen size={19} />
 				</a>
-			</div>
+
+				<a
+					href="/profile"
+					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
+						.url.pathname === '/profile'
+						? 'bg-sub/10 text-main'
+						: 'text-sub'}"
+					title="Dashboard & Personal Bests"
+				>
+					<BarChart2 size={19} />
+				</a>
+			</nav>
 		</div>
 
-		<div class="flex items-center gap-6 text-sm transition-opacity duration-300">
+		<div class="flex items-center gap-4 text-sm transition-opacity duration-300">
 			{#if currentUser}
 				<div class="group relative z-20">
-					<button
-						title="Go to Profile"
-						class="flex items-center gap-2 rounded px-3 py-1.5 text-main transition-all hover:bg-sub/10"
+					<a
+						href="/profile"
+						title="Go to Dashboard"
+						class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sub transition-all hover:bg-sub/10 hover:text-text {$page
+							.url.pathname === '/profile'
+							? 'text-main'
+							: ''}"
 					>
-						<User size={16} />
+						<User size={16} class="text-main" />
 						<span class="font-bold">{currentUser}</span>
-					</button>
+					</a>
 					<div
 						class="invisible absolute right-0 top-full pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100"
 					>
 						<div
-							class="flex min-w-[160px] flex-col rounded border border-sub/20 bg-bg p-1 font-mono text-sm shadow-xl"
+							class="flex min-w-[160px] flex-col rounded-lg border border-sub/20 bg-bg p-1 font-mono text-xs shadow-xl"
 						>
 							<a
 								href="/profile"
 								class="flex items-center gap-2 rounded px-3 py-2 text-sub transition-colors hover:bg-sub/10 hover:text-text"
 							>
-								<User size={14} /><span>Profile</span>
+								<BarChart2 size={14} /><span>dashboard</span>
 							</a>
 							<div class="my-1 h-[1px] bg-sub/10"></div>
 							<button
 								onclick={handleLogout}
 								class="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sub transition-colors hover:bg-error/10 hover:text-error"
 							>
-								<LogOut size={14} /><span>Sign Out</span>
+								<LogOut size={14} /><span>sign out</span>
 							</button>
 						</div>
 					</div>
@@ -259,9 +250,14 @@
 			{:else}
 				<a
 					href="/login"
-					class="flex h-8 w-8 items-center justify-center rounded text-sub hover:bg-sub/10 hover:text-text"
+					class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-bold text-sub transition-colors hover:bg-sub/10 hover:text-text {$page
+						.url.pathname === '/login'
+						? 'text-main'
+						: ''}"
+					title="Sign In / Register"
 				>
-					<User size={18} />
+					<User size={17} />
+					<span class="hidden sm:inline">login</span>
 				</a>
 			{/if}
 		</div>
@@ -274,7 +270,7 @@
 	<CommandPalette bind:show={showPalette} />
 
 	<div
-		class="pointer-events-none fixed bottom-6 left-0 right-0 z-50 px-8 transition-opacity duration-300 {showZenUI
+		class="pointer-events-none fixed bottom-6 left-0 right-0 z-50 px-6 transition-opacity duration-300 {showZenUI
 			? 'opacity-0'
 			: 'opacity-100'}"
 	>
@@ -317,10 +313,13 @@
 			<div
 				class="flex flex-col justify-end text-right text-[10px] font-bold uppercase tracking-widest text-sub opacity-60"
 			>
-				<div class="flex items-center gap-2">
+				<button
+					class="pointer-events-auto flex cursor-pointer items-center gap-2 transition-opacity hover:text-main hover:opacity-100"
+					onclick={() => (showPalette = true)}
+				>
 					<span>{currentTheme.value?.label || 'default'}</span>
 					<Palette size={10} />
-				</div>
+				</button>
 			</div>
 		</div>
 	</div>

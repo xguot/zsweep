@@ -1,13 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Keyboard, Info, Github, Code2, GitPullRequest, Cpu } from 'lucide-svelte';
+	import { Keyboard, Info, Github, Code2, Cpu } from 'lucide-svelte';
 	import { currentTheme } from '$lib/themeStore.svelte';
-	import { supabase } from '$lib/supabase';
 	import Chart from 'chart.js/auto';
 
 	let { data } = $props();
-
-	let currentUser: string | null = $state(null);
 
 	// --- CHART ---
 	let chartCanvas: HTMLCanvasElement;
@@ -40,17 +37,21 @@
 		const ctx = chartCanvas.getContext('2d');
 		if (!ctx) return;
 
-		const rawData = data.stats.game_results || [];
+		const rawData = (data.stats.game_results || []) as {
+			win: boolean;
+			mode: string;
+			time: number;
+		}[];
 
 		const validTimes = rawData
-			.filter((g: any) => g.win === true && g.mode === 'standard')
-			.map((g: any) => g.time);
+			.filter((g) => g.win === true && g.mode === 'standard')
+			.map((g) => g.time);
 
 		const { labels, counts } = createHistogram(validTimes, 10);
 
 		const theme = currentTheme.value;
 		const mainColor = theme ? `rgb(${theme.colors.main})` : '#64b5f6';
-		const gridColor = theme ? `rgba(${theme.colors.text}, 0.1)` : '#333';
+		const gridColor = theme ? `rgb(${theme.colors.text} / 0.1)` : '#333';
 		const textColor = theme ? `rgb(${theme.colors.sub})` : '#888';
 
 		chartInstance = new Chart(ctx, {
@@ -95,7 +96,7 @@
 		chartInstance.data.datasets[0].backgroundColor = `rgb(${theme.colors.main})`;
 		chartInstance.options.scales!.x!.ticks!.color = `rgb(${theme.colors.sub})`;
 		chartInstance.options.scales!.y!.ticks!.color = `rgb(${theme.colors.sub})`;
-		chartInstance.options.scales!.y!.grid!.color = `rgba(${theme.colors.text}, 0.1)`;
+		chartInstance.options.scales!.y!.grid!.color = `rgb(${theme.colors.text} / 0.1)`;
 		chartInstance.update();
 	});
 
@@ -116,49 +117,9 @@
 
 	let timeObj = $derived(formatTime(data.stats.seconds));
 
-	// --- AUTHENTICATION ---
-	onMount(() => {
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			if (session?.user) {
-				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
-			}
-		});
-
-		const {
-			data: { subscription }
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			currentUser = session?.user
-				? session.user.user_metadata.full_name || session.user.email?.split('@')[0]
-				: null;
-		});
-
-		return () => subscription.unsubscribe();
-	});
-
-	async function handleLogout() {
-		await supabase.auth.signOut();
-		currentUser = null;
-	}
-
 	// --- CONTRIBUTORS FETCH ---
 	type Contributor = { login: string; avatar_url: string; html_url: string };
-	let contributors: Contributor[] = $state([]);
-	const GITHUB_TOKEN = ''; // Optional token to avoid rate limits
-
-	onMount(async () => {
-		const headers: Record<string, string> = {};
-		if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
-		try {
-			const res = await fetch('https://api.github.com/repos/xguot/zsweep/contributors', {
-				headers
-			});
-			if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-			contributors = await res.json();
-		} catch (err) {
-			console.error('Failed to fetch contributors', err);
-			contributors = [];
-		}
-	});
+	let contributors: Contributor[] = $derived(data.contributors || []);
 </script>
 
 <div
@@ -222,9 +183,11 @@
 						class="font-bold text-text">flow state</span
 					>.
 					<strong class="text-main">zsweep</strong> reimagines the classic logic puzzle as a
-					keyboard-centric experience. By implementing Vim-style motions (`hjkl`, `w`, `b`, `{'{'}`,
-					`{'}'}`) and instant feedback, we aim to create the most efficient and satisfying sweeping
-					engine for developers.
+					keyboard-centric experience. By implementing Vim-style motions (<code>hjkl</code>,
+					<code>w</code>, <code>b</code>, <code>e</code>, <code>ge</code>, <code>0</code>,
+					<code>^</code>, <code>$</code>, <code>&#123;</code>, <code>&#125;</code>) and instant
+					feedback, we aim to create the most efficient and satisfying sweeping engine for
+					developers.
 				</p>
 			</section>
 
@@ -276,24 +239,32 @@
 						<span class="font-mono font-bold text-text">h j k l</span>
 					</div>
 					<div class="flex justify-between border-b border-sub/10 pb-2">
-						<span>Jump Words (Skip Open)</span>
-						<span class="font-mono font-bold text-text">w / b</span>
+						<span>Unrevealed Words (Start / End)</span>
+						<span class="font-mono font-bold text-text">w / b / e / ge</span>
+					</div>
+					<div class="flex justify-between border-b border-sub/10 pb-2">
+						<span>Frontier Clues (Jump Numbers)</span>
+						<span class="font-mono font-bold text-text">W / B / E</span>
+					</div>
+					<div class="flex justify-between border-b border-sub/10 pb-2">
+						<span>Row Bounds & Anchors</span>
+						<span class="font-mono font-bold text-text">0 / ^ / $ / g_ / gm</span>
+					</div>
+					<div class="flex justify-between border-b border-sub/10 pb-2">
+						<span>Vertical Anchors</span>
+						<span class="font-mono font-bold text-text">gg / G / H / M / L</span>
+					</div>
+					<div class="flex justify-between border-b border-sub/10 pb-2">
+						<span>Flag / Reveal Operators</span>
+						<span class="font-mono font-bold text-text">d / c / x / Space / Enter</span>
 					</div>
 					<div class="flex justify-between border-b border-sub/10 pb-2">
 						<span>Search Number</span>
-						<span class="font-mono font-bold text-text">/ [1-8]</span>
+						<span class="font-mono font-bold text-text">/ [0-8] (n / N)</span>
 					</div>
 					<div class="flex justify-between border-b border-sub/10 pb-2">
-						<span>Flag / Reveal</span>
-						<span class="font-mono font-bold text-text">Space / Enter</span>
-					</div>
-					<div class="flex justify-between border-b border-sub/10 pb-2">
-						<span>Restart</span>
-						<span class="font-mono font-bold text-text">Tab</span>
-					</div>
-					<div class="flex justify-between border-b border-sub/10 pb-2">
-						<span>Command Palette</span>
-						<span class="font-mono font-bold text-text">Esc</span>
+						<span>Restart / Command Palette</span>
+						<span class="font-mono font-bold text-text">Tab / Esc</span>
 					</div>
 				</div>
 			</section>

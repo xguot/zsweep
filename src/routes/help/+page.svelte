@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Keyboard, Hash, Gamepad2, Zap, BookOpen } from 'lucide-svelte';
 	import PatternDemo from '$lib/components/docs/PatternDemo.svelte';
+	import type { Cell } from '$lib/minesweeper';
 
-	function cell(r: number, c: number, overrides = {}): any {
+	function cell(r: number, c: number, overrides: Partial<Cell> = {}): Cell {
 		return {
 			row: r,
 			col: c,
@@ -119,39 +120,48 @@
 
 	const shortcuts = [
 		{ keys: ['Tab'], desc: 'Restart / Back to home' },
-		{ keys: ['Enter / i'], desc: 'Reveal a cell' },
-		{ keys: ['Space / a'], desc: 'Flag or chord' },
-		{ keys: ['Escape'], desc: 'Open palette' },
+		{ keys: ['Enter / i'], desc: 'Reveal or chord cell' },
+		{ keys: ['Space / a'], desc: 'Smart Flag or Chord' },
+		{ keys: ['x / f'], desc: 'Toggle Flag directly' },
+		{ keys: ['Escape'], desc: 'Cancel motion / Open palette' },
 		{ keys: ['z'], desc: 'Toggle zen mode' }
 	];
 
 	const motions = [
 		{ keys: ['h', 'j', 'k', 'l'], desc: 'Move Left / Down / Up / Right' },
-		{ keys: ['w', 'b'], desc: 'Jump forward / backward by word' },
-		{ keys: ['gg', 'G'], desc: 'Jump to Top / Bottom of grid' },
-		{ keys: ['/'], desc: 'Search for a number (e.g. /7)' },
-		{ keys: ['n', 'N'], desc: 'Next / Previous search match' },
-		{ keys: ['Esc'], desc: 'Cancel operator / Clear selection' },
-		{ keys: ['{', '}'], desc: 'Jump to previous / next block of numbers (planned)' },
-		{ keys: ['0'], desc: 'Jump to first cell in current row (planned)' },
-		{ keys: ['$'], desc: 'Jump to last cell in current row (planned)' }
+		{ keys: ['w', 'b'], desc: 'Start of next / previous unrevealed block' },
+		{ keys: ['e', 'ge'], desc: 'End of current/next / previous unrevealed block' },
+		{ keys: ['W', 'B', 'E'], desc: 'Jump across active frontier clue numbers' },
+		{ keys: ['0', '$'], desc: 'First / last column in current row' },
+		{ keys: ['^ / _', 'g_'], desc: 'First / last unrevealed cell in current row' },
+		{ keys: ['gm', '%'], desc: 'Middle of row / Mirror column across board' },
+		{ keys: ['gg', 'G'], desc: 'Top / Bottom row (or [count]G to row)' },
+		{ keys: ['H', 'M', 'L'], desc: 'Top / Middle / Bottom of board' },
+		{ keys: ['{', '}'], desc: 'Previous / next row with unrevealed cells' },
+		{ keys: ['J', 'K'], desc: 'Half-board jump Down / Up' },
+		{ keys: ['/', 'n', 'N'], desc: 'Search number [0-8] & cycle matches' }
 	];
 
 	const operators = [
 		{
-			combo: ['Space / a'],
-			desc: 'Flag Current',
-			detail: 'Flags the current cell immediately (like "dd").'
+			combo: ['d', 'e'],
+			desc: 'Flag to End of Word',
+			detail: 'Flags all unrevealed cells from cursor to the end of the current block.'
 		},
 		{
-			combo: ['Space', 'j'],
-			desc: 'Flag Range',
-			detail: 'Flags current cell and the one below.'
+			combo: ['c', 'w'],
+			desc: 'Reveal / Chord Range',
+			detail: 'Reveals or chords cells across the target motion range.'
+		},
+		{
+			combo: ['d', 'd'],
+			desc: 'Flag Line / Count',
+			detail: 'Flags current cell (or [count]dd to flag N cells to the right).'
 		},
 		{
 			combo: ['4', 'Space', 'l'],
-			desc: 'Count + Op',
-			detail: 'Flags current cell and 4 cells to the right.'
+			desc: 'Count + Smart Op',
+			detail: 'Applies smart flag/chord from cursor across 4 cells to the right.'
 		}
 	];
 </script>
@@ -213,7 +223,7 @@
 							<div class="flex gap-1">
 								{#each item.keys as key}
 									<kbd
-										class="min-w-[24px] rounded bg-sub/20 px-2 py-0.5 text-center font-bold text-white shadow-sm"
+										class="min-w-[24px] rounded bg-sub/20 px-2 py-0.5 text-center font-bold text-text shadow-sm"
 										>{key}</kbd
 									>
 								{/each}
@@ -231,8 +241,9 @@
 
 				<p class="mb-6 text-sm text-sub">
 					Use standard Vim keys to navigate efficiently. Motions support counts (e.g., <code
-						>4j</code
-					> moves down 4 times).
+						>10j</code
+					>
+					moves down 10 rows, <code>2e</code> jumps to the end of the second unrevealed block).
 				</p>
 
 				<div class="grid gap-4 sm:grid-cols-2">
@@ -260,14 +271,12 @@
 
 				<div class="mb-6 space-y-4 text-sm text-sub">
 					<p>
-						In Zsweep, <kbd class="rounded bg-sub/20 px-1 font-bold text-main">Space</kbd>
-						acts as an <strong>Operator</strong> (like <code>d</code> in Vim). It allows you to flag or
-						chord multiple cells at once by combining it with motions.
-					</p>
-					<p>
-						To act on multiple cells, place the <strong>count before the operator</strong>
-						(e.g., <code>4 Space l</code>). This prevents latency issues and ensures the action is
-						applied to the full range immediately.
+						In Zsweep, <kbd class="rounded bg-sub/20 px-1 font-bold text-main">d</kbd> (flag),
+						<kbd class="rounded bg-sub/20 px-1 font-bold text-main">c</kbd> (reveal/chord), and
+						<kbd class="rounded bg-sub/20 px-1 font-bold text-main">Space</kbd> (with count prefix)
+						act as <strong>Operators</strong>. Combine them with any motion (like <code>e</code>,
+						<code>w</code>, <code>$</code>, <code>0</code>, or <code>j</code>) to sweep entire walls
+						in a single keystroke sequence.
 					</p>
 				</div>
 
@@ -279,7 +288,7 @@
 							<div class="flex items-center gap-2">
 								{#each item.combo as key}
 									<kbd
-										class="min-w-[28px] rounded bg-sub/20 px-2 py-1 text-center font-bold text-white shadow-sm"
+										class="min-w-[28px] rounded bg-sub/20 px-2 py-1 text-center font-bold text-text shadow-sm"
 										>{key}</kbd
 									>
 								{/each}

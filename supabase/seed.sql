@@ -20,11 +20,14 @@ VALUES (
     now()
 ) ON CONFLICT (id) DO NOTHING;
 
--- Insert diverse game results for testing leaderboards and stats
+-- Insert diverse game results matching zsweep's standard and time modes
 INSERT INTO public.game_results (user_id, mode, setting, win, grids, accuracy, total_mines, time)
 VALUES 
-    ('d7b1f3e0-1234-4321-8888-999999999999', 'classic', 'expert', true, 480, 95, 99, 124),
-    ('d7b1f3e0-1234-4321-8888-999999999999', 'classic', 'intermediate', true, 256, 100, 40, 58),
-    ('d7b1f3e0-1234-4321-8888-999999999999', 'speed', 'beginner', true, 81, 100, 10, 12),
-    ('d7b1f3e0-1234-4321-8888-999999999999', 'classic', 'expert', false, 120, 75, 99, 45),
-    ('d7b1f3e0-1234-4321-8888-999999999999', 'classic', 'expert', true, 480, 92, 99, 135);
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'standard', '30x16', true, 1, 95, 99, 124),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'standard', '16x16', true, 1, 100, 40, 58),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'standard', '9x9', true, 1, 100, 10, 12),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'time', '15', true, 2, 98, 20, 15),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'time', '30', true, 3, 97, 30, 30),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'time', '60', true, 5, 96, 50, 60),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'standard', '30x16', false, 0, 75, 0, 45),
+    ('d7b1f3e0-1234-4321-8888-999999999999', 'standard', '30x16', true, 1, 92, 99, 135);

@@ -290,17 +290,19 @@
 									<span>{theme.label}</span>
 								</div>
 							{:else if paletteView === 'mineicons'}
+								{@const entry = 'icon' in item ? item : MINE_ICON_OPTIONS[0]}
 								<div class="flex items-center gap-3">
-									<item.icon size={12} class={i === selectedIndex ? 'text-main' : 'text-sub'} />
-									<span>{item.label}</span>
-									{#if mineIcon.value === item.id}
+									<entry.icon size={12} class={i === selectedIndex ? 'text-main' : 'text-sub'} />
+									<span>{entry.label}</span>
+									{#if mineIcon.value === entry.id}
 										<span class="text-main">✓</span>
 									{/if}
 								</div>
 							{:else}
+								{@const entry = 'id' in item ? item : LINE_NUMBER_OPTIONS[0]}
 								<div class="flex items-center gap-3">
-									<span>{item.label}</span>
-									{#if lineNumbers.value === item.id}
+									<span>{entry.label}</span>
+									{#if lineNumbers.value === entry.id}
 										<span class="text-main">✓</span>
 									{/if}
 								</div>
