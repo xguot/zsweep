@@ -10,7 +10,10 @@
   <table>
     <tr>
       <td style="border: none;">
-        <img src="https://github.com/user-attachments/assets/edab7b46-8470-4ffc-b5f8-39e6a92558d3" width="100" />
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/edab7b46-8470-4ffc-b5f8-39e6a92558d3" />
+          <img src="static/readme-logo-light.png" alt="zsweep logo" width="100" />
+        </picture>
       </td>
       <td style="border: none;">
         <h1><code>zsweep</code></h1>
