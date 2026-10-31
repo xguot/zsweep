@@ -880,7 +880,7 @@
 	{/if}
 
 	<footer
-		class="mt-auto flex w-full flex-col items-center gap-6 pb-8 pt-12 text-xs text-sub transition-all duration-300 {zenMode.value
+		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-12 text-xs text-sub transition-all duration-300 sm:pb-8 {zenMode.value
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
