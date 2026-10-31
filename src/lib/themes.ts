@@ -295,10 +295,10 @@ export const THEMES = [
 		label: 'Acme',
 		colors: {
 			bg: '255 255 234',
-			main: '136 136 204',
+			main: '158 238 238',
 			sub: '68 68 68',
 			text: '0 0 0',
-			error: '192 57 43'
+			error: '170 0 0'
 		}
 	},
 	{
