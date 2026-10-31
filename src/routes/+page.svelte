@@ -102,7 +102,7 @@
 			const rows = game.size.rows;
 			const gap = 4;
 			const hPad = 64;
-			const vPad = 340; // top UI + footer breathing room
+			const vPad = 360; // top UI + footer breathing room
 			const availW = windowWidth - hPad;
 			const availH = windowHeight - vPad;
 			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
