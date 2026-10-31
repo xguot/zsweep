@@ -5,6 +5,7 @@
 		getLocalGameResults,
 		type StoredGameResult
 	} from '$lib/supabase';
+	import { fetchAllRows } from '$lib/fetchAllRows';
 	import { User, Calendar, Clock, Download, Hourglass, Grid3x3, Flame, LogIn } from 'lucide-svelte';
 	import { SvelteDate } from 'svelte/reactivity';
 
@@ -323,13 +324,24 @@
 				const profile = await ensureUserProfile(user);
 				dataState.profile = profile;
 
-				const { data: remoteRows } = await supabase
+				const { count: totalPlays } = await supabase
 					.from('game_results')
-					.select('*')
-					.eq('user_id', user.id)
-					.order('created_at', { ascending: false });
+					.select('*', { count: 'exact', head: true })
+					.eq('user_id', user.id);
 
-				const combined = remoteRows && remoteRows.length > 0 ? remoteRows : localHistory;
+				const remoteRows = await fetchAllRows<StoredGameResult>(
+					(from, to) =>
+						supabase
+							.from('game_results')
+							.select('*')
+							.eq('user_id', user.id)
+							.order('created_at', { ascending: false })
+							.order('id', { ascending: false })
+							.range(from, to),
+					totalPlays ?? undefined
+				);
+
+				const combined = remoteRows.length > 0 ? remoteRows : localHistory;
 
 				if (cancelled) return;
 
