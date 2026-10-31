@@ -11,10 +11,7 @@
 	let { grid = [], onClose }: Props = $props();
 
 	function handleKey(e: KeyboardEvent) {
-		const isEscape = e.key === 'Escape';
-		const isCtrlKey = e.ctrlKey && (e.key === '[' || e.key === 'c');
-
-		if (isEscape || isCtrlKey) {
+		if (e.key === 'q') {
 			onClose();
 		}
 	}
@@ -49,5 +46,5 @@
 		{/if}
 	</div>
 
-	<p class="mt-6 font-mono text-sm text-sub opacity-60">Press ESC to close</p>
+	<p class="mt-6 font-mono text-sm text-sub opacity-60">Press q to close</p>
 </div>
