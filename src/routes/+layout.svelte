@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { User, LogOut, Palette, BarChart2 } from 'lucide-svelte';
+	import { User, LogOut, BookOpen, Info, Palette, BarChart2 } from 'lucide-svelte';
 
 	import { supabase } from '$lib/supabase';
 	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
@@ -176,6 +176,28 @@
 			</a>
 
 			<nav class="flex items-center gap-1.5">
+				<a
+					href="/about"
+					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
+						.url.pathname === '/about'
+						? 'bg-sub/10 text-main'
+						: 'text-sub'}"
+					title="About & Global Stats"
+				>
+					<Info size={19} />
+				</a>
+
+				<a
+					href="/help"
+					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
+						.url.pathname === '/help'
+						? 'bg-sub/10 text-main'
+						: 'text-sub'}"
+					title="Manual / Vim Guide"
+				>
+					<BookOpen size={19} />
+				</a>
+
 				<a
 					href="/profile"
 					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
