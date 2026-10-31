@@ -108,6 +108,19 @@ isolation. The test is disabled in production builds.
 
 ## Production design after the A/B decision
 
+Anticheat must run transparently during normal play. Do not expose the A/B selector,
+simulated latency controls, response diagnostics, verifier details, or an anticheat
+settings page in the production UI. Choose the implementation on the server;
+clients must not be able to opt out of verification or downgrade a ranked game.
+Keep the prototype page and API inaccessible outside development, with no public
+navigation links. Deployment checks must verify that both test routes return 404.
+
+Network requests and shipped client code remain inspectable in browser devtools;
+hidden UI or obscure endpoint names are not security boundaries. Service keys,
+private board state, and privileged verification logic stay server-side. A's seed
+is necessarily visible to its client; if keeping the live mine map private is a
+requirement, choose B rather than trying to conceal A's seed.
+
 Use SvelteKit server routes and `$lib/server` for the verifier and privileged
 Supabase client. Keep service credentials in private environment variables.
 Use the installed Kit 2 private environment API; current Kit 3 examples use
