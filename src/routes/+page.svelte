@@ -102,7 +102,7 @@
 			const rows = game.size.rows;
 			const gap = 4;
 			const hPad = 64;
-			const vPad = 260; // top UI + footer breathing room
+			const vPad = windowWidth < 640 ? 456 : 360; // mobile footer adds 96px below sm
 			const availW = windowWidth - hPad;
 			const availH = windowHeight - vPad;
 			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
@@ -715,7 +715,7 @@
 />
 
 <div
-	class="relative flex min-h-screen flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
+	class="relative flex flex-1 flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
 		? 'fixed inset-0 justify-center'
 		: ''}"
 >
@@ -880,7 +880,7 @@
 	{/if}
 
 	<footer
-		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-20 text-xs text-sub transition-all duration-300 {zenMode.value
+		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-12 text-xs text-sub transition-all duration-300 sm:pb-8 {zenMode.value
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
