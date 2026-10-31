@@ -115,7 +115,7 @@
 
 <div
 	class="relative select-none bg-bg transition-all duration-300 {vimMode ? 'cursor-none' : ''}"
-	style="touch-action: none;"
+	style="touch-action: manipulation;"
 	onmousedown={handleMouseDown}
 	oncontextmenu={(e) => e.preventDefault()}
 	role="grid"
@@ -185,6 +185,7 @@
 					use:passiveTouchStart={() => handleTouchStart(r, c)}
 					ontouchend={(e) => handleTouchEnd(e, r, c)}
 					ontouchmove={handleTouchMove}
+					ontouchcancel={handleTouchMove}
 					oncontextmenu={(e) => e.preventDefault()}
 					onmouseenter={() => handleHover(r, c)}
 					aria-label={cell.isOpen

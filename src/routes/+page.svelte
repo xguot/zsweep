@@ -109,7 +109,7 @@
 			const availH = windowHeight - vPad;
 			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
 			const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
-			return Math.max(20, Math.min(32, maxW, maxH));
+			return Math.max(20, Math.min(zenMode.value ? 35 : 32, maxW, maxH));
 		})()
 	);
 
@@ -798,13 +798,12 @@
 			</div>
 		</div>
 
-		<div class="w-full overflow-x-auto px-8 pb-6 pt-1">
-			<div
-				class="animate-in fade-in mx-auto flex w-max flex-col gap-2 duration-300 {zenMode.value
-					? 'scale-110'
-					: 'scale-100'}"
-				style="transition: transform 500ms ease-in-out;"
-			>
+		<div
+			class="w-full overflow-x-auto pb-6 pt-1 {lineNumbers.value === 'off'
+				? 'px-1 sm:px-8'
+				: 'px-8'}"
+		>
+			<div class="animate-in fade-in mx-auto flex w-max flex-col gap-2 duration-300">
 				<div class="mb-2 flex select-none items-end justify-between px-1 text-main">
 					<div class="flex w-16 flex-col">
 						<span class="text-[10px] font-bold uppercase text-sub opacity-50">time</span>
