@@ -140,7 +140,7 @@
 
 <div class="relative min-h-screen bg-bg pb-20 font-mono text-text transition-colors duration-300">
 	<header
-		class="mx-auto flex w-full max-w-6xl items-center justify-between px-8 py-7 transition-opacity duration-300 {showZenUI
+		class="flex w-full items-center justify-between px-6 py-7 transition-opacity duration-300 {showZenUI
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
