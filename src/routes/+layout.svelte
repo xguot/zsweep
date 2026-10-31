@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { User, LogOut, BookOpen, Info, Palette, BarChart2 } from 'lucide-svelte';
+	import { User, LogOut, Palette, BarChart2 } from 'lucide-svelte';
 
 	import { supabase } from '$lib/supabase';
 	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
@@ -22,11 +22,6 @@
 	let showPalette = $state(false);
 	let lastKey = '';
 	let lastKeyTime = 0;
-
-	let seenState = $state({
-		about: true,
-		manual: true
-	});
 
 	function attemptQuit() {
 		try {
@@ -104,23 +99,11 @@
 		}
 	}
 
-	function markAsSeen(key: 'about' | 'manual') {
-		if (!seenState[key]) {
-			seenState[key] = true;
-			localStorage.setItem(`zsweep-seen-${key}`, 'true');
-		}
-	}
-
 	$effect(() => {
 		applyThemeToRoot(currentTheme.value);
 	});
 
 	onMount(() => {
-		seenState = {
-			about: !!localStorage.getItem('zsweep-seen-about'),
-			manual: !!localStorage.getItem('zsweep-seen-manual')
-		};
-
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
 				currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
@@ -193,34 +176,6 @@
 			</a>
 
 			<nav class="flex items-center gap-1.5">
-				<a
-					href="/about"
-					onclick={() => markAsSeen('about')}
-					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
-						.url.pathname === '/about'
-						? 'bg-sub/10 text-main'
-						: !seenState.about
-							? 'animate-pulse text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]'
-							: 'text-sub'}"
-					title="About & Global Stats"
-				>
-					<Info size={19} />
-				</a>
-
-				<a
-					href="/help"
-					onclick={() => markAsSeen('manual')}
-					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
-						.url.pathname === '/help'
-						? 'bg-sub/10 text-main'
-						: !seenState.manual
-							? 'animate-pulse text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]'
-							: 'text-sub'}"
-					title="Manual / Vim Guide"
-				>
-					<BookOpen size={19} />
-				</a>
-
 				<a
 					href="/profile"
 					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
