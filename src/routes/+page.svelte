@@ -17,11 +17,12 @@
 		DIRECTIONS,
 		revealCellsAround,
 		countFlagsAround,
+		calculate3BV,
 		type Cell
 	} from '$lib/minesweeper';
 
-	import { supabase } from '$lib/supabase';
-	import { handleVimKey, calculateVimJump } from '$lib/game/input/vim';
+	import { supabase, ensureUserProfile, saveLocalGameResult } from '$lib/supabase';
+	import { handleVimKey, calculateVimJump, calculateVimGJump } from '$lib/game/input/vim';
 
 	import GameGrid from '$lib/components/GameGrid.svelte';
 	import ResultView from '$lib/components/ResultView.svelte';
@@ -30,13 +31,6 @@
 	import { onMount } from 'svelte';
 	import { zenMode } from '$lib/zenStore.svelte';
 	import { lineNumbers } from '$lib/lineNumberStore.svelte';
-
-	import type { PageData } from './$types';
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
 
 	const GAME_CONFIG = {
 		gridSizes: [
@@ -67,6 +61,7 @@
 		isMouseDown: false,
 		vimMode: false,
 		operator: null as 'SMART' | 'FLAG' | 'REVEAL' | null,
+		operatorKey: '',
 		operatorCount: 1
 	});
 
@@ -93,10 +88,9 @@
 		cellsRevealed: 0,
 		sessionTotalMines: 0,
 		sessionErrors: 0,
-		finalAccuracy: 0
+		finalAccuracy: 0,
+		threeBV: 0
 	});
-
-	let currentUser: string | null = null;
 
 	let windowWidth = $state(0);
 	let windowHeight = $state(0);
@@ -114,6 +108,21 @@
 			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
 			const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
 			return Math.max(20, Math.min(32, maxW, maxH));
+		})()
+	);
+
+	let vimStatusText = $derived(
+		(() => {
+			const parts: string[] = [];
+			if (input.operator) {
+				const opLabel =
+					input.operatorKey ||
+					(input.operator === 'FLAG' ? 'f' : input.operator === 'REVEAL' ? 'c' : '␣');
+				parts.push(`${input.operatorCount > 1 ? input.operatorCount : ''}${opLabel}`);
+			}
+			if (input.buffer) parts.push(input.buffer);
+			if (input.lastKey === 'g') parts.push('g');
+			return parts.join('');
 		})()
 	);
 
@@ -180,6 +189,7 @@
 		stats.sessionTotalMines = 0;
 		stats.sessionErrors = 0;
 		stats.finalAccuracy = 0;
+		stats.threeBV = 0;
 		stats.isWin = false;
 		stats.history = [];
 		stats.clicksThisSecond = 0;
@@ -199,7 +209,10 @@
 			c: Math.floor(game.size.cols / 2)
 		};
 		input.operator = null;
+		input.operatorKey = '';
+		input.operatorCount = 1;
 		input.buffer = '';
+		input.lastKey = '';
 	}
 
 	function startSession() {
@@ -230,6 +243,9 @@
 			stats.cellsRevealed = win
 				? game.size.rows * game.size.cols - game.size.mines
 				: countCurrentSafeOpen();
+			if (!game.isFirstClick && game.grid.length > 0) {
+				stats.threeBV = calculate3BV(game.grid);
+			}
 		} else {
 			if (win) {
 				stats.cellsRevealed += countCurrentSafeOpen();
@@ -251,7 +267,7 @@
 				const newCell = { ...cell };
 
 				if (newCell.isFlagged && !newCell.isMine) {
-					(newCell as any).isWrong = true;
+					newCell.isWrong = true;
 				}
 
 				if (newCell.isMine && !newCell.isFlagged) {
@@ -259,7 +275,7 @@
 				}
 
 				if (r === explodedR && c === explodedC) {
-					(newCell as any).isExploded = true;
+					newCell.isExploded = true;
 					newCell.isOpen = true;
 					newCell.isFlagged = false;
 				}
@@ -360,6 +376,7 @@
 
 		input.cursor = dest;
 		input.operator = null;
+		input.operatorKey = '';
 		input.operatorCount = 1;
 	}
 
@@ -380,6 +397,8 @@
 				search.term = search.term.slice(0, -1);
 			} else if (/^[0-8]$/.test(e.key)) {
 				search.term = e.key;
+				executeSearch();
+				search.active = false;
 			}
 			return;
 		}
@@ -388,11 +407,14 @@
 		if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) return;
 
 		if (isEscapeCombo) {
-			if (input.buffer.length > 0 || input.operator !== null) {
+			if (input.buffer.length > 0 || input.operator !== null || input.lastKey !== '') {
 				e.preventDefault();
-				e.stopPropagation(); // This prevents +layout.svelte from seeing the key
+				e.stopPropagation(); // Prevents +layout.svelte from opening the command palette when clearing pending Vim state
 				input.buffer = '';
 				input.operator = null;
+				input.operatorKey = '';
+				input.operatorCount = 1;
+				input.lastKey = '';
 			}
 			return;
 		}
@@ -405,23 +427,58 @@
 			return;
 		}
 
+		if (game.state === 'finished') return;
+
+		const currentMult = input.buffer.length > 0 ? parseInt(input.buffer, 10) : 1;
+		const totalMult = input.operator ? input.operatorCount * currentMult : currentMult;
+
+		// Handle g-prefixed multi-key motions (gg, ge, g_, gm)
 		const now = Date.now();
-		if (e.key === 'g' && input.lastKey === 'g' && now - input.lastKeyTime < 500) {
+		if (input.lastKey === 'g' && now - input.lastKeyTime < 1000) {
 			input.lastKey = '';
-			const dest = { r: 0, c: input.cursor.c };
-			if (input.operator) executeOperatorRange(dest);
-			else input.cursor = dest;
-			input.buffer = '';
-			return;
+			const gDest = calculateVimGJump(
+				e.key,
+				totalMult,
+				input.cursor,
+				game.grid,
+				game.size.rows,
+				game.size.cols
+			);
+			if (gDest) {
+				e.preventDefault();
+				input.vimMode = true;
+				if (input.operator) executeOperatorRange(gDest);
+				else input.cursor = gDest;
+				input.buffer = '';
+				return;
+			}
 		}
+
 		if (e.key === 'g') {
+			e.preventDefault();
+			input.vimMode = true;
 			input.lastKey = 'g';
 			input.lastKeyTime = now;
 			return;
 		}
+		input.lastKey = '';
 
-		const currentMult = input.buffer.length > 0 ? parseInt(input.buffer) : 1;
-		const totalMult = input.operator ? input.operatorCount * currentMult : currentMult;
+		// Handle '0' as part of a count if buffer is already non-empty (e.g., 10j, 20l)
+		if (e.key === '0' && input.buffer.length > 0) {
+			e.preventDefault();
+			input.vimMode = true;
+			input.buffer += '0';
+			return;
+		}
+
+		// Handle double-operator shortcuts (dd -> flag current, cc -> reveal/chord current)
+		if (input.operator && input.operatorKey === e.key && (e.key === 'd' || e.key === 'c')) {
+			e.preventDefault();
+			const endCol = Math.min(game.size.cols - 1, input.cursor.c + totalMult - 1);
+			executeOperatorRange({ r: input.cursor.r, c: endCol });
+			input.buffer = '';
+			return;
+		}
 
 		const jumpDest = calculateVimJump(
 			e.key,
@@ -470,14 +527,19 @@
 				input.buffer += action.value;
 				return;
 			}
-			if (action.type === 'ZERO') {
-				if (input.buffer.length > 0) input.buffer += '0';
+
+			if (action.type === 'OPERATOR') {
+				input.operator = action.operator;
+				input.operatorKey = e.key;
+				input.operatorCount = currentMult;
+				input.buffer = '';
 				return;
 			}
 
 			if (action.type === 'SMART' || action.type === 'FLAG' || action.type === 'REVEAL') {
 				if (input.buffer.length > 0) {
 					input.operator = action.type;
+					input.operatorKey = e.key === ' ' ? '␣' : e.key;
 					input.operatorCount = currentMult;
 					input.buffer = '';
 				} else {
@@ -490,7 +552,7 @@
 
 	function executeSearch() {
 		if (!search.term) return;
-		const target = parseInt(search.term);
+		const target = parseInt(search.term, 10);
 		search.matches = [];
 		for (let r = 0; r < game.size.rows; r++) {
 			for (let c = 0; c < game.size.cols; c++) {
@@ -502,7 +564,7 @@
 		}
 		if (search.matches.length > 0) {
 			search.matchIndex = search.matches.findIndex(
-				(m) => m.r > input.cursor.r || (m.r === input.cursor.r && m.c >= input.cursor.c)
+				(m) => m.r > input.cursor.r || (m.r === input.cursor.r && m.c > input.cursor.c)
 			);
 			if (search.matchIndex === -1) search.matchIndex = 0;
 			input.cursor = search.matches[search.matchIndex];
@@ -547,6 +609,7 @@
 				stats.cellsRevealed += totalSafe;
 				stats.sessionTotalMines += game.size.mines;
 				stats.sessionErrors += countWrongFlags();
+				stats.threeBV += calculate3BV(game.grid);
 				resetBoard();
 			} else {
 				stats.gridsSolved = 1;
@@ -557,8 +620,8 @@
 
 	function triggerExplosion() {
 		confetti({
-			particleCount: 150,
-			spread: 100,
+			particleCount: 120,
+			spread: 90,
 			origin: { y: 0.6 },
 			colors: ['#ef4444', '#dc2626', '#b91c1c']
 		});
@@ -566,31 +629,56 @@
 
 	function triggerWin() {
 		confetti({
-			particleCount: 200,
-			spread: 120,
+			particleCount: 160,
+			spread: 110,
 			origin: { y: 0.6 },
 			colors: ['#10b981', '#34d399', '#f59e0b']
 		});
 	}
 
 	async function saveResult(win: boolean) {
+		const timeTaken =
+			game.mode === 'standard' ? game.timer : Math.max(1, game.timeLimit - game.timer);
+		const totalMinesCleared = win
+			? game.mode === 'standard'
+				? game.size.mines
+				: stats.gridsSolved * game.size.mines
+			: 0;
+		const settingLabel = game.mode === 'time' ? game.timeLimit.toString() : game.size.label;
+		const gridsCount = game.mode === 'standard' ? (win ? 1 : 0) : stats.gridsSolved;
+		const threeBvPerSec =
+			stats.threeBV > 0 ? parseFloat((stats.threeBV / Math.max(1, timeTaken)).toFixed(2)) : 0;
+
 		const {
 			data: { session }
 		} = await supabase.auth.getSession();
-		let timeTaken =
-			game.mode === 'standard' ? game.timer : Math.max(0, game.timeLimit - game.timer);
+
+		// Always persist locally so the dashboard and personal bests work offline and in guest mode
+		saveLocalGameResult({
+			user_id: session?.user?.id || null,
+			mode: game.mode,
+			setting: settingLabel,
+			win,
+			time: timeTaken,
+			grids: gridsCount,
+			total_mines: totalMinesCleared,
+			accuracy: stats.finalAccuracy,
+			three_bv: stats.threeBV,
+			three_bv_per_sec: threeBvPerSec
+		});
+
+		if (session?.user) {
+			await ensureUserProfile(session.user);
+		}
+
 		const { error } = await supabase.from('game_results').insert({
 			user_id: session?.user?.id || null,
 			mode: game.mode,
-			setting: game.mode === 'time' ? game.timeLimit.toString() : game.size.label,
+			setting: settingLabel,
 			win,
 			time: timeTaken,
-			grids: game.mode === 'standard' ? (win ? 1 : 0) : stats.gridsSolved,
-			total_mines: win
-				? game.mode === 'standard'
-					? game.size.mines
-					: stats.gridsSolved * game.size.mines
-				: 0,
+			grids: gridsCount,
+			total_mines: totalMinesCleared,
 			accuracy: stats.finalAccuracy
 		});
 		if (error) console.error('Error saving result:', error);
@@ -601,7 +689,7 @@
 			data: { session }
 		} = await supabase.auth.getSession();
 		if (session?.user) {
-			currentUser = session.user.user_metadata.full_name || session.user.email?.split('@')[0];
+			ensureUserProfile(session.user);
 		}
 
 		const hasVisited = localStorage.getItem('zsweep-visited');
@@ -613,12 +701,6 @@
 
 		fullReset();
 	});
-
-	async function handleLogout() {
-		await supabase.auth.signOut();
-		currentUser = null;
-		fullReset();
-	}
 </script>
 
 <svelte:head>
@@ -640,18 +722,17 @@
 	{#if game.state === 'finished'}
 		<ResultView
 			win={stats.isWin}
-			time={game.mode === 'time' ? game.timeLimit - game.timer : game.timer}
+			time={game.mode === 'time' ? Math.max(1, game.timeLimit - game.timer) : game.timer}
 			cells={stats.cellsRevealed}
 			totalClicks={stats.clicks}
 			history={stats.history}
 			finalGrid={game.grid}
 			accuracy={stats.finalAccuracy}
-			sizeLabel={game.size.label}
+			sizeLabel={game.mode === 'time' ? `${game.timeLimit}s` : game.size.label}
 			gridsSolved={stats.gridsSolved}
-			gridsPlayed={stats.gridsPlayed}
 			mode={game.mode}
 			totalMines={stats.sessionTotalMines}
-			totalGlobalSeconds={data?.stats?.seconds || 0}
+			threeBV={stats.threeBV}
 			restart={fullReset}
 		/>
 	{:else}
@@ -722,11 +803,26 @@
 			style="transition: transform 500ms ease-in-out;"
 		>
 			<div class="mb-2 flex select-none items-end justify-between px-1 text-main">
-				<div class="flex w-12 flex-col">
+				<div class="flex w-16 flex-col">
 					<span class="text-[10px] font-bold uppercase text-sub opacity-50">time</span>
 					<span class="text-3xl font-bold leading-none text-main">{game.timer}</span>
 				</div>
-				<div class="flex w-12 flex-col text-right">
+
+				<div class="flex items-center gap-2 pb-0.5 text-xs">
+					{#if vimStatusText}
+						<span
+							class="rounded bg-main/15 px-2 py-0.5 font-mono text-xs font-bold tracking-wider text-main"
+						>
+							{vimStatusText}
+						</span>
+					{:else if input.vimMode}
+						<span class="font-mono text-[10px] text-sub opacity-40">
+							{input.cursor.r + 1}:{input.cursor.c + 1}
+						</span>
+					{/if}
+				</div>
+
+				<div class="flex w-16 flex-col text-right">
 					<span class="text-[10px] font-bold uppercase text-sub opacity-50">mines</span>
 					<span class="text-3xl font-bold leading-none">{game.minesLeft}</span>
 				</div>

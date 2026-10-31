@@ -5,6 +5,8 @@ export type Cell = {
 	isOpen: boolean;
 	isFlagged: boolean;
 	neighborCount: number;
+	isExploded?: boolean;
+	isWrong?: boolean;
 };
 
 export const DIRECTIONS = [
