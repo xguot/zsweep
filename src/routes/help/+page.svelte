@@ -122,7 +122,7 @@
 		{ keys: ['Tab'], desc: 'Restart / Back to home' },
 		{ keys: ['Enter / i'], desc: 'Reveal or chord cell' },
 		{ keys: ['Space / a'], desc: 'Smart Flag or Chord' },
-		{ keys: ['x / f'], desc: 'Toggle Flag directly' },
+		{ keys: ['x'], desc: 'Toggle Flag directly' },
 		{ keys: ['Escape'], desc: 'Cancel motion / Open palette' },
 		{ keys: ['z'], desc: 'Toggle zen mode' }
 	];
@@ -139,7 +139,8 @@
 		{ keys: ['H', 'M', 'L'], desc: 'Top / Middle / Bottom of board' },
 		{ keys: ['{', '}'], desc: 'Previous / next row with unrevealed cells' },
 		{ keys: ['J', 'K'], desc: 'Half-board jump Down / Up' },
-		{ keys: ['/', 'n', 'N'], desc: 'Search number [0-8] & cycle matches' }
+		{ keys: ['f0–8', 'F0–8'], desc: 'Find a revealed number (0 for empty) to the right / left' },
+		{ keys: ['/', 'n', 'N'], desc: 'Search number [1-8] or unrevealed cells [0] & cycle matches' }
 	];
 
 	const operators = [
