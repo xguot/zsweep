@@ -141,7 +141,11 @@
 	<meta name="theme-color" content="#323437" />
 </svelte:head>
 
-<div class="relative min-h-screen bg-bg pb-20 font-mono text-text transition-colors duration-300">
+<div
+	class="relative flex min-h-screen flex-col bg-bg font-mono text-text transition-colors duration-300 {isHomePage
+		? ''
+		: 'pb-20'}"
+>
 	<header
 		class="flex w-full items-center justify-between px-6 py-7 transition-opacity duration-300 {showZenUI
 			? 'pointer-events-none opacity-0'
@@ -266,7 +270,7 @@
 		</div>
 	</header>
 
-	<main class="w-full">
+	<main class="flex w-full flex-1 flex-col">
 		{@render children?.()}
 	</main>
 
