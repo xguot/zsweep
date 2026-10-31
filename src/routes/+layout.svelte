@@ -248,11 +248,11 @@
 	<CommandPalette bind:show={showPalette} />
 
 	<div
-		class="pointer-events-none fixed bottom-6 left-0 right-0 z-50 px-8 transition-opacity duration-300 {showZenUI
+		class="pointer-events-none fixed bottom-6 left-0 right-0 z-50 px-6 transition-opacity duration-300 {showZenUI
 			? 'opacity-0'
 			: 'opacity-100'}"
 	>
-		<div class="mx-auto flex w-full max-w-6xl select-none justify-between">
+		<div class="flex w-full select-none justify-between">
 			<div class="flex flex-col gap-2 text-[10px] font-bold tracking-widest text-sub opacity-60">
 				<button
 					class="pointer-events-auto flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-100"
