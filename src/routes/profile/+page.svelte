@@ -7,6 +7,7 @@
 		type StoredGameResult
 	} from '$lib/supabase';
 	import { fetchAllRows } from '$lib/fetchAllRows';
+	import { mergeGameResults } from '$lib/game/history';
 	import { User, Calendar, Clock, Download, Hourglass, Grid3x3, Flame, LogIn } from 'lucide-svelte';
 	import { SvelteDate } from 'svelte/reactivity';
 
@@ -299,6 +300,7 @@
 		let cancelled = false;
 
 		(async () => {
+			let historyUserId: string | null = null;
 			try {
 				const localHistory = getLocalGameResults();
 				const { data: authData } = await supabase.auth.getUser();
@@ -321,6 +323,7 @@
 					return;
 				}
 
+				historyUserId = user.id;
 				ui.isGuest = false;
 				const profile = await ensureUserProfile(user);
 				dataState.profile = profile;
@@ -342,7 +345,7 @@
 					totalPlays ?? undefined
 				);
 
-				const combined = remoteRows.length > 0 ? remoteRows : localHistory;
+				const combined = mergeGameResults(remoteRows, getLocalGameResults(), user.id);
 
 				if (cancelled) return;
 
@@ -355,7 +358,10 @@
 			} catch (err) {
 				console.error('Profile load fallback:', err);
 				const localHistory = getLocalGameResults();
-				const calculated = calculateStats(localHistory);
+				ui.isGuest = historyUserId === null;
+				const calculated = calculateStats(
+					historyUserId ? mergeGameResults([], localHistory, historyUserId) : localHistory
+				);
 				dataState.history = calculated.normalizedHistory;
 				stats = calculated.stats;
 				dataState.timeBests = calculated.timeBests;

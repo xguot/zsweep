@@ -23,6 +23,8 @@ export interface StoredGameResult {
 	accuracy: number;
 	three_bv?: number;
 	three_bv_per_sec?: number;
+	replay_version?: number;
+	replay_id?: string | null;
 	created_at: string;
 }
 
@@ -48,7 +50,10 @@ export function saveLocalGameResult(
 		id:
 			typeof crypto !== 'undefined' && 'randomUUID' in crypto
 				? crypto.randomUUID()
-				: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+				: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+						const random = Math.floor(Math.random() * 16);
+						return (char === 'x' ? random : (random & 3) | 8).toString(16);
+					}),
 		created_at: new Date().toISOString()
 	};
 
@@ -63,6 +68,18 @@ export function saveLocalGameResult(
 	}
 
 	return entry;
+}
+
+export function setLocalGameResultUser(id: string, userId: string | null) {
+	if (!browser) return;
+	try {
+		const results = getLocalGameResults().map((result) =>
+			result.id === id ? { ...result, user_id: userId } : result
+		);
+		localStorage.setItem(LOCAL_RESULTS_KEY, JSON.stringify(results));
+	} catch (error) {
+		console.error('Failed to update local game result:', error);
+	}
 }
 
 /**

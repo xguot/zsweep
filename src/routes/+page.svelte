@@ -21,7 +21,14 @@
 		type Cell
 	} from '$lib/minesweeper';
 
-	import { supabase, ensureUserProfile, saveLocalGameResult } from '$lib/supabase';
+	import {
+		supabase,
+		ensureUserProfile,
+		saveLocalGameResult,
+		setLocalGameResultUser
+	} from '$lib/supabase';
+	import { resolve } from '$app/paths';
+	import { ReplayRecorder } from '$lib/game/recording';
 	import { handleVimKey, calculateVimJump, calculateVimGJump } from '$lib/game/input/vim';
 
 	import GameGrid from '$lib/components/GameGrid.svelte';
@@ -52,6 +59,9 @@
 		timerInterval: undefined as ReturnType<typeof setInterval> | undefined,
 		isFirstClick: true
 	});
+
+	let recording = new ReplayRecorder(9, 9, 10);
+	let sessionUserId: string | null = null;
 
 	let input = $state({
 		cursor: { r: 0, c: 0 },
@@ -197,10 +207,12 @@
 		game.timer = game.mode === 'time' ? game.timeLimit : 0;
 		if (game.timerInterval) clearInterval(game.timerInterval);
 
+		recording = new ReplayRecorder(game.size.rows, game.size.cols, game.size.mines);
 		resetBoard();
 	}
 
 	function resetBoard() {
+		recording.nextBoard();
 		game.isFirstClick = true;
 		game.grid = createGrid(game.size.rows, game.size.cols);
 		game.minesLeft = game.size.mines;
@@ -219,8 +231,8 @@
 		if (game.state === 'playing') return;
 		game.state = 'playing';
 		game.timerInterval = setInterval(() => {
-			if (game.mode === 'time') game.timer--;
-			else game.timer++;
+			const elapsed = Math.floor(recording.elapsed() / 1000);
+			game.timer = game.mode === 'time' ? Math.max(0, game.timeLimit - elapsed) : elapsed;
 
 			stats.history = [...stats.history, stats.clicksThisSecond];
 			stats.clicksThisSecond = 0;
@@ -230,6 +242,9 @@
 	}
 
 	function finishSession(win: boolean) {
+		if (game.state === 'finished') return;
+		const elapsed = Math.floor(recording.elapsed() / 1000);
+		game.timer = game.mode === 'time' ? Math.max(0, game.timeLimit - elapsed) : elapsed;
 		game.state = 'finished';
 		stats.isWin = win;
 		if (game.timerInterval) clearInterval(game.timerInterval);
@@ -247,14 +262,12 @@
 				stats.threeBV = calculate3BV(game.grid);
 			}
 		} else {
-			if (win) {
-				stats.cellsRevealed += countCurrentSafeOpen();
-				stats.sessionTotalMines += game.size.mines;
-				stats.gridsPlayed++;
-			}
+			stats.cellsRevealed += countCurrentSafeOpen();
+			stats.sessionTotalMines += game.size.mines;
+			stats.gridsPlayed++;
 		}
 
-		if (!win) stats.sessionErrors += countWrongFlags();
+		stats.sessionErrors += countWrongFlags();
 		stats.finalAccuracy = calculateAccuracy();
 		game.grid = [...game.grid];
 		if (win) triggerWin();
@@ -285,14 +298,21 @@
 		);
 	}
 
+	function timeExpired(elapsed: number) {
+		if (game.mode !== 'time' || game.state !== 'playing') return false;
+		if (elapsed < game.timeLimit * 1000) return false;
+		finishSession(true);
+		return true;
+	}
+
 	function handleClick(r: number, c: number) {
-		if (game.state === 'finished' || game.grid[r][c].isFlagged) return;
+		const timestamp = recording.elapsed();
+		if (game.state === 'finished' || timeExpired(timestamp) || game.grid[r][c].isFlagged) return;
 		stats.clicks++;
 		stats.clicksThisSecond++;
 
 		if (game.isFirstClick) {
 			game.isFirstClick = false;
-			if (game.state === 'pending') startSession();
 			for (const row of game.grid) {
 				for (const cell of row) {
 					cell.isFlagged = false;
@@ -300,7 +320,10 @@
 			}
 			game.minesLeft = game.size.mines;
 			placeMines(game.grid, game.size.mines, { r, c });
+			recording.startBoard(game.grid);
+			if (game.state === 'pending') startSession();
 		}
+		recording.record('reveal', r, c, timestamp);
 
 		const canChord =
 			game.grid[r][c].isOpen && countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
@@ -311,7 +334,7 @@
 
 		if (result.gameOver) {
 			triggerExplosion();
-			stats.sessionErrors += 1 + countWrongFlags();
+			stats.sessionErrors += 1;
 			revealFinalBoard(r, c);
 			finishSession(false);
 		} else {
@@ -320,7 +343,9 @@
 	}
 
 	function toggleFlag(r: number, c: number) {
-		if (game.state === 'finished' || game.grid[r][c].isOpen) return;
+		const timestamp = recording.elapsed();
+		if (game.state === 'finished' || timeExpired(timestamp) || game.grid[r][c].isOpen) return;
+		if (game.state === 'playing') recording.record('flag', r, c, timestamp);
 		game.grid[r][c].isFlagged = !game.grid[r][c].isFlagged;
 		game.minesLeft += game.grid[r][c].isFlagged ? -1 : 1;
 		stats.clicks++;
@@ -637,57 +662,59 @@
 	}
 
 	async function saveResult(win: boolean) {
+		// Snapshot before auth or network calls so restarting cannot change this submission.
+		const replay = recording.finish();
 		const timeTaken =
-			game.mode === 'standard' ? game.timer : Math.max(1, game.timeLimit - game.timer);
-		const totalMinesCleared = win
-			? game.mode === 'standard'
-				? game.size.mines
-				: stats.gridsSolved * game.size.mines
-			: 0;
-		const settingLabel = game.mode === 'time' ? game.timeLimit.toString() : game.size.label;
-		const gridsCount = game.mode === 'standard' ? (win ? 1 : 0) : stats.gridsSolved;
-		const threeBvPerSec =
-			stats.threeBV > 0 ? parseFloat((stats.threeBV / Math.max(1, timeTaken)).toFixed(2)) : 0;
-
-		const {
-			data: { session }
-		} = await supabase.auth.getSession();
-
-		// Always persist locally so the dashboard and personal bests work offline and in guest mode
-		saveLocalGameResult({
-			user_id: session?.user?.id || null,
+			game.mode === 'standard'
+				? Math.floor(replay.duration_ms / 1000)
+				: win
+					? game.timeLimit
+					: Math.max(1, Math.floor(replay.duration_ms / 1000));
+		const result = {
 			mode: game.mode,
-			setting: settingLabel,
+			setting: game.mode === 'time' ? game.timeLimit.toString() : game.size.label,
 			win,
 			time: timeTaken,
-			grids: gridsCount,
-			total_mines: totalMinesCleared,
+			grids: stats.gridsSolved,
+			total_mines: win ? stats.gridsSolved * game.size.mines : 0,
 			accuracy: stats.finalAccuracy,
 			three_bv: stats.threeBV,
-			three_bv_per_sec: threeBvPerSec
-		});
+			three_bv_per_sec: Number((stats.threeBV / Math.max(1, timeTaken)).toFixed(2))
+		};
 
-		if (session?.user) {
+		// Keep local history available even when auth or submission is unavailable.
+		const localResult = saveLocalGameResult({
+			...result,
+			user_id: sessionUserId,
+			replay_version: replay.version
+		});
+		try {
+			const {
+				data: { session }
+			} = await supabase.auth.getSession();
+			sessionUserId = session?.user?.id ?? null;
+			setLocalGameResultUser(localResult.id, sessionUserId);
+			if (!session?.user) return;
 			await ensureUserProfile(session.user);
+			const response = await fetch(resolve('/api/games'), {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					authorization: `Bearer ${session.access_token}`
+				},
+				body: JSON.stringify({ id: localResult.id, result, replay })
+			});
+			if (!response.ok) console.error('Error saving result:', await response.json());
+		} catch (error) {
+			console.error('Error saving result:', error);
 		}
-
-		const { error } = await supabase.from('game_results').insert({
-			user_id: session?.user?.id || null,
-			mode: game.mode,
-			setting: settingLabel,
-			win,
-			time: timeTaken,
-			grids: gridsCount,
-			total_mines: totalMinesCleared,
-			accuracy: stats.finalAccuracy
-		});
-		if (error) console.error('Error saving result:', error);
 	}
 
 	onMount(async () => {
 		const {
 			data: { session }
 		} = await supabase.auth.getSession();
+		sessionUserId = session?.user?.id ?? null;
 		if (session?.user) {
 			ensureUserProfile(session.user);
 		}
