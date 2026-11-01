@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import '../app.css';
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { User, LogOut, BookOpen, Info, Palette, BarChart2 } from 'lucide-svelte';
@@ -21,6 +21,7 @@
 
 	let currentUser: string | null = $state(null);
 	let showPalette = $state(false);
+	setContext('openCommandPalette', () => (showPalette = true));
 	let lastKey = '';
 	let lastKeyTime = 0;
 
@@ -142,22 +143,20 @@
 </svelte:head>
 
 <div
-	class="relative flex min-h-screen flex-col bg-bg font-mono text-text transition-colors duration-300 {isHomePage
-		? ''
-		: 'pb-20'}"
+	class="relative flex min-h-screen flex-col bg-bg font-mono text-text transition-colors duration-300"
 >
 	<header
-		class="flex w-full items-center justify-between px-6 py-7 transition-opacity duration-300 {showZenUI
+		class="flex w-full items-center justify-between px-4 py-6 transition-opacity duration-300 sm:px-6 sm:py-7 {showZenUI
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
-		<div class="flex items-center gap-5">
+		<div class="flex items-center gap-3 sm:gap-5">
 			<a
 				href={resolve('/')}
-				class="group flex select-none items-center gap-3 transition-opacity hover:opacity-80"
+				class="group flex select-none items-center gap-2 transition-opacity hover:opacity-80 sm:gap-3"
 			>
 				<svg
-					class="h-8 w-8 fill-current text-main transition-transform group-hover:rotate-12"
+					class="h-7 w-7 fill-current text-main transition-transform group-hover:rotate-12 sm:h-8 sm:w-8"
 					viewBox="0 0 1001 1023"
 					version="1.1"
 					xmlns="http://www.w3.org/2000/svg"
@@ -176,16 +175,16 @@
 					</g>
 				</svg>
 				<div class="flex flex-col">
-					<h1 class="text-3xl font-black leading-none tracking-tighter text-text">
+					<h1 class="text-2xl font-black leading-none tracking-tighter text-text sm:text-3xl">
 						z<span class="text-main">sweep</span>
 					</h1>
 				</div>
 			</a>
 
-			<nav class="flex items-center gap-1.5">
+			<nav class="flex items-center gap-1 sm:gap-1.5">
 				<a
 					href={resolve('/about')}
-					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
+					class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text sm:h-9 sm:w-9 {$page
 						.url.pathname === '/about'
 						? 'bg-sub/10 text-main'
 						: 'text-sub'}"
@@ -196,7 +195,7 @@
 
 				<a
 					href={resolve('/help')}
-					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
+					class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text sm:h-9 sm:w-9 {$page
 						.url.pathname === '/help'
 						? 'bg-sub/10 text-main'
 						: 'text-sub'}"
@@ -207,7 +206,7 @@
 
 				<a
 					href={resolve('/profile')}
-					class="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text {$page
+					class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text sm:h-9 sm:w-9 {$page
 						.url.pathname === '/profile'
 						? 'bg-sub/10 text-main'
 						: 'text-sub'}"
@@ -218,7 +217,15 @@
 			</nav>
 		</div>
 
-		<div class="flex items-center gap-4 text-sm transition-opacity duration-300">
+		<div class="flex items-center gap-1 text-sm transition-opacity duration-300 sm:gap-4">
+			<button
+				class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-sub transition-colors hover:bg-sub/10 hover:text-main"
+				onclick={() => (showPalette = true)}
+				title="Choose theme"
+			>
+				<Palette size={16} />
+				<span class="hidden sm:inline">{currentTheme.value?.label || 'default'}</span>
+			</button>
 			{#if currentUser}
 				<div class="group relative z-20">
 					<a
@@ -257,7 +264,7 @@
 			{:else}
 				<a
 					href={resolve('/login')}
-					class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-bold text-sub transition-colors hover:bg-sub/10 hover:text-text {$page
+					class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-bold text-sub transition-colors hover:bg-sub/10 hover:text-text sm:px-3 {$page
 						.url.pathname === '/login'
 						? 'text-main'
 						: ''}"
@@ -275,59 +282,4 @@
 	</main>
 
 	<CommandPalette bind:show={showPalette} />
-
-	<div
-		class="pointer-events-none fixed bottom-6 left-0 right-0 z-50 px-6 transition-opacity duration-300 {showZenUI
-			? 'opacity-0'
-			: 'opacity-100'}"
-	>
-		<div class="flex w-full select-none justify-between">
-			<div class="flex flex-col gap-2 text-[10px] font-bold tracking-widest text-sub opacity-60">
-				<button
-					class="pointer-events-auto flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-100"
-					onclick={() => ($page.url.pathname === '/' ? location.reload() : goto(resolve('/')))}
-				>
-					<kbd
-						class="flex min-w-[36px] justify-center rounded bg-sub/20 px-1.5 py-0.5 font-mono text-text shadow-sm"
-						>tab</kbd
-					>
-					<span class="h-[1px] w-3 bg-sub/30"></span>
-					<span>restart</span>
-				</button>
-
-				<div class="flex items-center gap-3">
-					<kbd
-						class="flex min-w-[36px] justify-center rounded bg-sub/20 px-1.5 py-0.5 font-mono text-text shadow-sm"
-						>spc</kbd
-					>
-					<span class="h-[1px] w-3 bg-sub/30"></span>
-					<span>flag/chord</span>
-				</div>
-
-				<button
-					class="pointer-events-auto flex cursor-pointer items-center gap-3 transition-opacity hover:opacity-100"
-					onclick={() => (showPalette = !showPalette)}
-				>
-					<kbd
-						class="flex min-w-[36px] justify-center rounded bg-sub/20 px-1.5 py-0.5 font-mono text-text shadow-sm"
-						>esc</kbd
-					>
-					<span class="h-[1px] w-3 bg-sub/30"></span>
-					<span>palette</span>
-				</button>
-			</div>
-
-			<div
-				class="flex flex-col justify-end text-right text-[10px] font-bold uppercase tracking-widest text-sub opacity-60"
-			>
-				<button
-					class="pointer-events-auto flex cursor-pointer items-center gap-2 transition-opacity hover:text-main hover:opacity-100"
-					onclick={() => (showPalette = true)}
-				>
-					<span>{currentTheme.value?.label || 'default'}</span>
-					<Palette size={10} />
-				</button>
-			</div>
-		</div>
-	</div>
 </div>

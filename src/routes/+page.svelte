@@ -29,15 +29,22 @@
 	} from '$lib/supabase';
 	import { resolve } from '$app/paths';
 	import { ReplayRecorder } from '$lib/game/recording';
-	import { handleVimKey, calculateVimJump, calculateVimGJump } from '$lib/game/input/vim';
+	import {
+		handleVimKey,
+		calculateVimJump,
+		calculateVimGJump,
+		calculateVimFind
+	} from '$lib/game/input/vim';
 
 	import GameGrid from '$lib/components/GameGrid.svelte';
 	import ResultView from '$lib/components/ResultView.svelte';
 	import CustomSettingsModal from '$lib/components/CustomSettingsModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { zenMode } from '$lib/zenStore.svelte';
 	import { lineNumbers } from '$lib/lineNumberStore.svelte';
+
+	const openCommandPalette = getContext<() => void>('openCommandPalette');
 
 	const GAME_CONFIG = {
 		gridSizes: [
@@ -112,12 +119,12 @@
 			const rows = game.size.rows;
 			const gap = 4;
 			const hPad = 64;
-			const vPad = windowWidth < 640 ? 456 : 360; // mobile footer adds 96px below sm
+			const vPad = windowWidth < 640 ? 400 : 360;
 			const availW = windowWidth - hPad;
 			const availH = windowHeight - vPad;
 			const maxW = Math.floor((availW - (cols - 1) * gap) / cols);
 			const maxH = Math.floor((availH - (rows - 1) * gap) / rows);
-			return Math.max(20, Math.min(32, maxW, maxH));
+			return Math.max(20, Math.min(zenMode.value ? 35 : 32, maxW, maxH));
 		})()
 	);
 
@@ -127,11 +134,11 @@
 			if (input.operator) {
 				const opLabel =
 					input.operatorKey ||
-					(input.operator === 'FLAG' ? 'f' : input.operator === 'REVEAL' ? 'c' : '␣');
+					(input.operator === 'FLAG' ? 'd' : input.operator === 'REVEAL' ? 'c' : '␣');
 				parts.push(`${input.operatorCount > 1 ? input.operatorCount : ''}${opLabel}`);
 			}
 			if (input.buffer) parts.push(input.buffer);
-			if (input.lastKey === 'g') parts.push('g');
+			if (input.lastKey) parts.push(input.lastKey);
 			return parts.join('');
 		})()
 	);
@@ -405,6 +412,15 @@
 		input.operatorCount = 1;
 	}
 
+	function cancelFind() {
+		if (input.lastKey !== 'f' && input.lastKey !== 'F') return;
+		input.lastKey = '';
+		input.buffer = '';
+		input.operator = null;
+		input.operatorKey = '';
+		input.operatorCount = 1;
+	}
+
 	function handleInput(e: KeyboardEvent) {
 		const isEscapeCombo = e.key === 'Escape' || (e.ctrlKey && (e.key === '[' || e.key === 'c'));
 
@@ -454,8 +470,40 @@
 
 		if (game.state === 'finished') return;
 
+		if (
+			(input.lastKey === 'f' || input.lastKey === 'F') &&
+			Date.now() - input.lastKeyTime >= 1000
+		) {
+			cancelFind();
+		}
+
 		const currentMult = input.buffer.length > 0 ? parseInt(input.buffer, 10) : 1;
 		const totalMult = input.operator ? input.operatorCount * currentMult : currentMult;
+
+		if ((input.lastKey === 'f' || input.lastKey === 'F') && Date.now() - input.lastKeyTime < 1000) {
+			if (e.key === 'Shift') return;
+			e.preventDefault();
+			e.stopPropagation();
+			const dest = calculateVimFind(input.lastKey, e.key, totalMult, input.cursor, game.grid);
+			input.lastKey = '';
+			if (dest && input.operator) executeOperatorRange(dest);
+			else if (dest) input.cursor = dest;
+			else {
+				input.operator = null;
+				input.operatorKey = '';
+				input.operatorCount = 1;
+			}
+			input.buffer = '';
+			return;
+		}
+
+		if (e.key === 'f' || e.key === 'F') {
+			e.preventDefault();
+			input.vimMode = true;
+			input.lastKey = e.key;
+			input.lastKeyTime = Date.now();
+			return;
+		}
 
 		// Handle g-prefixed multi-key motions (gg, ge, g_, gm)
 		const now = Date.now();
@@ -764,7 +812,7 @@
 		/>
 	{:else}
 		<div
-			class="mb-8 flex select-none items-center gap-6 rounded-lg bg-sub/10 px-4 py-2 text-xs transition-all duration-300 {game.state ===
+			class="mb-8 flex max-w-[calc(100%-2rem)] select-none flex-wrap items-center justify-center gap-x-4 gap-y-3 rounded-lg bg-sub/10 px-4 py-3 text-xs transition-all duration-300 sm:gap-x-6 sm:py-2 {game.state ===
 				'playing' || zenMode.value
 				? 'pointer-events-none opacity-0'
 				: 'opacity-100'}"
@@ -788,7 +836,7 @@
 				</button>
 			</div>
 
-			<div class="h-3 w-[1px] bg-sub/20"></div>
+			<div class="hidden h-3 w-[1px] bg-sub/20 sm:block"></div>
 
 			<div class="flex items-center gap-3">
 				{#if game.mode === 'standard'}
@@ -824,57 +872,81 @@
 		</div>
 
 		<div
-			class="animate-in fade-in flex flex-col gap-2 duration-300 {zenMode.value
-				? 'scale-110'
-				: 'scale-100'}"
-			style="transition: transform 500ms ease-in-out;"
+			class="w-full overflow-x-auto pb-6 pt-1 {lineNumbers.value === 'off'
+				? 'px-1 sm:px-8'
+				: 'px-8'}"
 		>
-			<div class="mb-2 flex select-none items-end justify-between px-1 text-main">
-				<div class="flex w-16 flex-col">
-					<span class="text-[10px] font-bold uppercase text-sub opacity-50">time</span>
-					<span class="text-3xl font-bold leading-none text-main">{game.timer}</span>
+			<div class="animate-in fade-in mx-auto flex w-max flex-col gap-2 duration-300">
+				<div class="mb-2 flex select-none items-end justify-between px-1 text-main">
+					<div class="flex w-16 flex-col">
+						<span class="text-[10px] font-bold uppercase text-sub opacity-50">time</span>
+						<span class="text-3xl font-bold leading-none text-main">{game.timer}</span>
+					</div>
+
+					<div class="flex items-center gap-2 pb-0.5 text-xs">
+						{#if vimStatusText}
+							<span
+								class="rounded bg-main/15 px-2 py-0.5 font-mono text-xs font-bold tracking-wider text-main"
+							>
+								{vimStatusText}
+							</span>
+						{:else if input.vimMode}
+							<span class="font-mono text-[10px] text-sub opacity-40">
+								{input.cursor.r + 1}:{input.cursor.c + 1}
+							</span>
+						{/if}
+					</div>
+
+					<div class="flex w-16 flex-col text-right">
+						<span class="text-[10px] font-bold uppercase text-sub opacity-50">mines</span>
+						<span class="text-3xl font-bold leading-none">{game.minesLeft}</span>
+					</div>
 				</div>
 
-				<div class="flex items-center gap-2 pb-0.5 text-xs">
-					{#if vimStatusText}
-						<span
-							class="rounded bg-main/15 px-2 py-0.5 font-mono text-xs font-bold tracking-wider text-main"
-						>
-							{vimStatusText}
-						</span>
-					{:else if input.vimMode}
-						<span class="font-mono text-[10px] text-sub opacity-40">
-							{input.cursor.r + 1}:{input.cursor.c + 1}
-						</span>
-					{/if}
-				</div>
-
-				<div class="flex w-16 flex-col text-right">
-					<span class="text-[10px] font-bold uppercase text-sub opacity-50">mines</span>
-					<span class="text-3xl font-bold leading-none">{game.minesLeft}</span>
-				</div>
+				<GameGrid
+					grid={game.grid}
+					cursor={input.cursor}
+					numCols={game.size.cols}
+					gameState={game.state}
+					vimMode={input.vimMode}
+					isMouseDown={input.isMouseDown}
+					lineNumberMode={lineNumbers.value}
+					{cellSize}
+					onclick={(e) => handleClick(e.r, e.c)}
+					onflag={(e) => toggleFlag(e.r, e.c)}
+					onhover={(e) => {
+						cancelFind();
+						input.cursor = e;
+						input.vimMode = false;
+					}}
+					onmousedown={() => {
+						cancelFind();
+						if (game.state === 'playing') input.isMouseDown = true;
+						input.vimMode = false;
+					}}
+				/>
 			</div>
-
-			<GameGrid
-				grid={game.grid}
-				cursor={input.cursor}
-				numCols={game.size.cols}
-				gameState={game.state}
-				vimMode={input.vimMode}
-				isMouseDown={input.isMouseDown}
-				lineNumberMode={lineNumbers.value}
-				{cellSize}
-				onclick={(e) => handleClick(e.r, e.c)}
-				onflag={(e) => toggleFlag(e.r, e.c)}
-				onhover={(e) => {
-					input.cursor = e;
-					input.vimMode = false;
-				}}
-				onmousedown={() => {
-					if (game.state === 'playing') input.isMouseDown = true;
-					input.vimMode = false;
-				}}
-			/>
+		</div>
+		<div
+			class="flex items-center justify-center gap-3 px-4 text-xs leading-5 text-text/60 transition-opacity duration-300 sm:gap-6 {zenMode.value
+				? 'pointer-events-none opacity-0'
+				: 'opacity-100'}"
+		>
+			<button
+				class="flex items-center gap-1 whitespace-nowrap py-1 transition-colors hover:text-text focus-visible:text-text sm:gap-2"
+				onclick={fullReset}
+			>
+				<kbd class="font-mono font-semibold text-text/80">tab</kbd> <span>restart</span>
+			</button>
+			<span class="flex items-center gap-1 whitespace-nowrap py-1 sm:gap-2">
+				<kbd class="font-mono font-semibold text-text/80">space</kbd> <span>flag/chord</span>
+			</span>
+			<button
+				class="flex items-center gap-1 whitespace-nowrap py-1 transition-colors hover:text-text focus-visible:text-text sm:gap-2"
+				onclick={openCommandPalette}
+			>
+				<kbd class="font-mono font-semibold text-text/80">esc</kbd> <span>palette</span>
+			</button>
 		</div>
 	{/if}
 
@@ -907,7 +979,7 @@
 	{/if}
 
 	<footer
-		class="mt-auto flex w-full flex-col items-center gap-6 pb-32 pt-12 text-xs text-sub transition-all duration-300 sm:pb-8 {zenMode.value
+		class="mt-auto flex w-full flex-col items-center gap-6 px-4 pb-8 pt-12 text-xs text-sub transition-all duration-300 {zenMode.value
 			? 'pointer-events-none opacity-0'
 			: 'opacity-100'}"
 	>
