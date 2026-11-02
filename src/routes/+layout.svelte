@@ -147,7 +147,7 @@
 >
 	<header
 		class="flex w-full items-center justify-between px-4 py-6 transition-opacity duration-300 sm:px-6 sm:py-7 {showZenUI
-			? 'pointer-events-none opacity-0'
+			? 'hidden'
 			: 'opacity-100'}"
 	>
 		<div class="flex items-center gap-3 sm:gap-5">
