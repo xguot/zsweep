@@ -1,8 +1,6 @@
 <script lang="ts">
 	import confetti from 'canvas-confetti';
 	import {
-		Grid3x3,
-		Wrench,
 		Hourglass,
 		Infinity as InfinityIcon,
 		Mail,
@@ -47,6 +45,8 @@
 		],
 		timeLimits: [15, 30, 60]
 	};
+
+	let standardSize = GAME_CONFIG.gridSizes[0];
 
 	let game = $state({
 		mode: 'standard' as 'time' | 'standard',
@@ -167,10 +167,14 @@
 	}
 
 	function setMode(mode: 'time' | 'standard') {
-		game.mode = mode;
-		if (game.mode === 'time' && game.size.label !== '9x9') {
+		if (game.mode === mode) return;
+		if (mode === 'time') {
+			standardSize = game.size;
 			game.size = GAME_CONFIG.gridSizes[0];
+		} else {
+			game.size = standardSize;
 		}
+		game.mode = mode;
 		fullReset();
 	}
 
@@ -785,61 +789,68 @@
 		/>
 	{:else}
 		<div
-			class="mb-8 flex max-w-[calc(100%-2rem)] select-none flex-wrap items-center justify-center gap-x-4 gap-y-3 rounded-lg bg-sub/10 px-4 py-3 text-xs transition-all duration-300 sm:gap-x-6 sm:py-2 {game.state ===
+			class="mb-8 flex max-w-[calc(100%-2rem)] select-none flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-lg bg-sub/10 px-4 py-2 text-xs transition-opacity duration-200 motion-reduce:transition-none {game.state ===
 				'playing' || zenMode.value
 				? 'pointer-events-none opacity-0'
 				: 'opacity-100'}"
 		>
-			<div class="flex items-center gap-3">
-				<button
-					class="flex items-center gap-2 transition-colors {game.mode === 'standard'
-						? 'font-bold text-main'
-						: 'text-sub hover:text-text'}"
-					onclick={() => setMode('standard')}
-				>
-					<InfinityIcon size={12} /><span>standard</span>
-				</button>
-				<button
-					class="flex items-center gap-2 transition-colors {game.mode === 'time'
-						? 'font-bold text-main'
-						: 'text-sub hover:text-text'}"
-					onclick={() => setMode('time')}
-				>
-					<Hourglass size={12} /><span>time</span>
-				</button>
+			<div class="flex items-center gap-4" role="group" aria-label="Game mode">
+				{#each ['standard', 'time'] as mode (mode)}
+					<button
+						class="flex min-h-7 items-center gap-2 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text {game.mode ===
+						mode
+							? 'border-text font-semibold text-text'
+							: 'border-transparent text-text/50 hover:text-text'}"
+						aria-pressed={game.mode === mode}
+						onclick={() => setMode(mode as 'standard' | 'time')}
+					>
+						{#if mode === 'standard'}<InfinityIcon size={12} />{:else}<Hourglass size={12} />{/if}
+						{mode}
+					</button>
+				{/each}
 			</div>
 
-			<div class="hidden h-3 w-[1px] bg-sub/20 sm:block"></div>
+			<div class="hidden h-4 w-px bg-text/15 sm:block"></div>
 
-			<div class="flex items-center gap-3">
+			<div
+				class="flex items-center gap-4"
+				role="group"
+				aria-label={game.mode === 'standard' ? 'Board size' : 'Time limit'}
+			>
 				{#if game.mode === 'standard'}
-					<Grid3x3 size={12} class="text-sub opacity-50" />
 					{#each GAME_CONFIG.gridSizes as size (size.label)}
 						<button
-							class={game.size.label === size.label
-								? 'font-bold text-main'
-								: 'text-sub hover:text-text'}
+							class="min-h-7 w-10 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text {game
+								.size.label === size.label
+								? 'border-text font-semibold text-text'
+								: 'border-transparent text-text/50 hover:text-text'}"
+							aria-pressed={game.size.label === size.label}
 							onclick={() => setSize(size)}>{size.label}</button
 						>
 					{/each}
 				{:else}
-					<Hourglass size={12} class="text-sub opacity-50" />
 					{#each GAME_CONFIG.timeLimits as t (t)}
 						<button
-							class={game.timeLimit === t ? 'font-bold text-main' : 'text-sub hover:text-text'}
+							class="min-h-7 w-10 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text {game.timeLimit ===
+							t
+								? 'border-text font-semibold text-text'
+								: 'border-transparent text-text/50 hover:text-text'}"
+							aria-pressed={game.timeLimit === t}
 							onclick={() => setTime(t)}>{t}s</button
 						>
 					{/each}
 				{/if}
-
-				<div class="mx-1 h-3 w-[1px] bg-sub/20"></div>
-
 				<button
-					class="text-sub transition-colors hover:text-main"
+					class="min-h-7 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text {(game.mode ===
+						'standard' &&
+						game.size.label === 'Custom') ||
+					(game.mode === 'time' && !GAME_CONFIG.timeLimits.includes(game.timeLimit))
+						? 'border-text font-semibold text-text'
+						: 'border-transparent text-text/50 hover:text-text'}"
 					onclick={openCustomModal}
-					title="Custom Settings"
+					aria-label={game.mode === 'standard' ? 'Custom board settings' : 'Custom time limit'}
 				>
-					<Wrench size={12} />
+					custom
 				</button>
 			</div>
 		</div>
