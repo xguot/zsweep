@@ -768,7 +768,7 @@
 
 <div
 	class="relative flex flex-1 flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
-		? 'fixed inset-0 justify-center'
+		? 'fixed inset-0 overflow-y-auto [justify-content:safe_center]'
 		: ''}"
 >
 	{#if game.state === 'finished'}
@@ -791,7 +791,9 @@
 		<div
 			class="mb-8 flex max-w-[calc(100%-2rem)] select-none flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-lg bg-sub/10 px-4 py-2 text-xs transition-opacity duration-200 motion-reduce:transition-none {game.state ===
 				'playing' || zenMode.value
-				? 'pointer-events-none opacity-0'
+				? zenMode.value
+					? 'hidden'
+					: 'pointer-events-none opacity-0'
 				: 'opacity-100'}"
 		>
 			<div class="flex items-center gap-4" role="group" aria-label="Game mode">
@@ -913,7 +915,7 @@
 		</div>
 		<div
 			class="flex items-center justify-center gap-3 px-4 text-xs leading-5 text-text/60 transition-opacity duration-300 sm:gap-6 {zenMode.value
-				? 'pointer-events-none opacity-0'
+				? 'hidden'
 				: 'opacity-100'}"
 		>
 			<button
@@ -964,7 +966,7 @@
 
 	<footer
 		class="mt-auto flex w-full flex-col items-center gap-6 px-4 pb-8 pt-12 text-xs text-sub transition-all duration-300 {zenMode.value
-			? 'pointer-events-none opacity-0'
+			? 'hidden'
 			: 'opacity-100'}"
 	>
 		<div class="flex flex-wrap justify-center gap-8 opacity-60">
