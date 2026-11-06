@@ -12,14 +12,19 @@
 		createGrid,
 		placeMines,
 		revealCell,
-		DIRECTIONS,
 		revealCellsAround,
 		countFlagsAround,
 		calculate3BV,
+		calculateSolved3BV,
 		type Cell
 	} from '$lib/minesweeper';
 
-	import { supabase, ensureUserProfile, saveLocalGameResult } from '$lib/supabase';
+	import {
+		supabase,
+		ensureUserProfile,
+		saveLocalGameResult,
+		markLocalGameResultSynced
+	} from '$lib/supabase';
 	import {
 		handleVimKey,
 		calculateVimJump,
@@ -31,7 +36,7 @@
 	import ResultView from '$lib/components/ResultView.svelte';
 	import CustomSettingsModal from '$lib/components/CustomSettingsModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import { zenMode } from '$lib/zenStore.svelte';
 	import { lineNumbers } from '$lib/lineNumberStore.svelte';
 
@@ -56,6 +61,8 @@
 		grid: [] as Cell[][],
 		minesLeft: 0,
 		timer: 0,
+		startedAt: 0,
+		elapsed: 0,
 		timerInterval: undefined as ReturnType<typeof setInterval> | undefined,
 		isFirstClick: true
 	});
@@ -87,7 +94,6 @@
 
 	let stats = $state({
 		clicks: 0,
-		clicksThisSecond: 0,
 		history: [] as number[],
 		isWin: false,
 		gridsSolved: 0,
@@ -203,9 +209,9 @@
 		stats.threeBV = 0;
 		stats.isWin = false;
 		stats.history = [];
-		stats.clicksThisSecond = 0;
 
 		game.timer = game.mode === 'time' ? game.timeLimit : 0;
+		game.elapsed = 0;
 		if (game.timerInterval) clearInterval(game.timerInterval);
 
 		resetBoard();
@@ -226,46 +232,52 @@
 		input.lastKey = '';
 	}
 
+	function elapsedSeconds() {
+		const elapsed = (performance.now() - game.startedAt) / 1000;
+		return game.mode === 'time' ? Math.min(elapsed, game.timeLimit) : elapsed;
+	}
+
+	function updateTimer() {
+		if (game.state !== 'playing') return false;
+		game.elapsed = elapsedSeconds();
+		game.timer =
+			game.mode === 'time' ? Math.ceil(game.timeLimit - game.elapsed) : Math.floor(game.elapsed);
+		if (game.mode === 'time' && game.elapsed >= game.timeLimit) {
+			finishSession(true);
+			return true;
+		}
+		return false;
+	}
+
+	function recordAction() {
+		const second = game.state === 'playing' ? Math.floor(elapsedSeconds()) : 0;
+		while (stats.history.length <= second) stats.history.push(0);
+		stats.history[second]++;
+		stats.clicks++;
+	}
+
 	function startSession() {
 		if (game.state === 'playing') return;
 		game.state = 'playing';
-		game.timerInterval = setInterval(() => {
-			if (game.mode === 'time') game.timer--;
-			else game.timer++;
-
-			stats.history = [...stats.history, stats.clicksThisSecond];
-			stats.clicksThisSecond = 0;
-
-			if (game.mode === 'time' && game.timer <= 0) finishSession(true);
-		}, 1000);
+		game.startedAt = performance.now();
+		game.timerInterval = setInterval(updateTimer, 100);
 	}
 
 	function finishSession(win: boolean) {
+		if (game.state !== 'playing') return;
+		game.elapsed = Math.max(0.001, elapsedSeconds());
 		game.state = 'finished';
 		stats.isWin = win;
 		if (game.timerInterval) clearInterval(game.timerInterval);
-		if (stats.clicksThisSecond > 0) {
-			stats.history = [...stats.history, stats.clicksThisSecond];
-		}
+		while (stats.history.length < Math.ceil(game.elapsed)) stats.history.push(0);
 
-		if (game.mode === 'standard') {
-			stats.gridsPlayed = 1;
-			stats.sessionTotalMines = game.size.mines;
-			stats.cellsRevealed = win
-				? game.size.rows * game.size.cols - game.size.mines
-				: countCurrentSafeOpen();
-			if (!game.isFirstClick && game.grid.length > 0) {
-				stats.threeBV = calculate3BV(game.grid);
-			}
-		} else {
-			if (win) {
-				stats.cellsRevealed += countCurrentSafeOpen();
-				stats.sessionTotalMines += game.size.mines;
-				stats.gridsPlayed++;
-			}
+		if (!game.isFirstClick) {
+			stats.cellsRevealed += countCurrentSafeOpen();
+			stats.sessionTotalMines += game.size.mines;
+			stats.gridsPlayed++;
+			stats.threeBV += calculateSolved3BV(game.grid);
+			stats.sessionErrors += countWrongFlags();
 		}
-
-		if (!win) stats.sessionErrors += countWrongFlags();
 		stats.finalAccuracy = calculateAccuracy();
 		game.grid = [...game.grid];
 		if (win) triggerWin();
@@ -298,8 +310,7 @@
 
 	function handleClick(r: number, c: number) {
 		if (game.state === 'finished' || game.grid[r][c].isFlagged) return;
-		stats.clicks++;
-		stats.clicksThisSecond++;
+		if (game.state === 'playing' && updateTimer()) return;
 
 		if (game.isFirstClick) {
 			game.isFirstClick = false;
@@ -313,6 +324,8 @@
 			placeMines(game.grid, game.size.mines, { r, c });
 		}
 
+		recordAction();
+
 		const canChord =
 			game.grid[r][c].isOpen && countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
 
@@ -322,8 +335,8 @@
 
 		if (result.gameOver) {
 			triggerExplosion();
-			stats.sessionErrors += 1 + countWrongFlags();
-			revealFinalBoard(r, c);
+			stats.sessionErrors += 1;
+			revealFinalBoard(result.exploded!.r, result.exploded!.c);
 			finishSession(false);
 		} else {
 			checkWin();
@@ -331,31 +344,17 @@
 	}
 
 	function toggleFlag(r: number, c: number) {
+		if (game.state === 'playing') updateTimer();
 		if (game.state === 'finished' || game.grid[r][c].isOpen) return;
+		if (game.state === 'playing') recordAction();
 		game.grid[r][c].isFlagged = !game.grid[r][c].isFlagged;
 		game.minesLeft += game.grid[r][c].isFlagged ? -1 : 1;
-		stats.clicks++;
-		stats.clicksThisSecond++;
-		game.grid = game.grid;
+		game.grid = [...game.grid];
 	}
 
 	function attemptChord(r: number, c: number) {
-		const cell = game.grid[r][c];
-		let flagCount = 0;
-		DIRECTIONS.forEach(([dr, dc]) => {
-			if (game.grid[r + dr]?.[c + dc]?.isFlagged) flagCount++;
-		});
-		if (flagCount === cell.neighborCount) {
-			stats.clicks++;
-			stats.clicksThisSecond++;
-			DIRECTIONS.forEach(([dr, dc]) => {
-				const nr = r + dr,
-					nc = c + dc;
-				if (game.grid[nr]?.[nc] && !game.grid[nr][nc].isOpen && !game.grid[nr][nc].isFlagged) {
-					handleClick(nr, nc);
-				}
-			});
-		}
+		if (countFlagsAround(game.grid, r, c) !== game.grid[r][c].neighborCount) return;
+		handleClick(r, c);
 	}
 
 	function applyAction(type: string, r: number, c: number) {
@@ -689,25 +688,11 @@
 	}
 
 	async function saveResult(win: boolean) {
-		const timeTaken =
-			game.mode === 'standard' ? game.timer : Math.max(1, game.timeLimit - game.timer);
-		const totalMinesCleared = win
-			? game.mode === 'standard'
-				? game.size.mines
-				: stats.gridsSolved * game.size.mines
-			: 0;
+		const timeTaken = Math.max(0.001, Math.round(game.elapsed * 1000) / 1000);
+		const totalMinesCleared = stats.gridsSolved * game.size.mines;
 		const settingLabel = game.mode === 'time' ? game.timeLimit.toString() : game.size.label;
 		const gridsCount = game.mode === 'standard' ? (win ? 1 : 0) : stats.gridsSolved;
-		const threeBvPerSec =
-			stats.threeBV > 0 ? parseFloat((stats.threeBV / Math.max(1, timeTaken)).toFixed(2)) : 0;
-
-		const {
-			data: { session }
-		} = await supabase.auth.getSession();
-
-		// Always persist locally so the dashboard and personal bests work offline and in guest mode
-		saveLocalGameResult({
-			user_id: session?.user?.id || null,
+		const result = {
 			mode: game.mode,
 			setting: settingLabel,
 			win,
@@ -716,7 +701,18 @@
 			total_mines: totalMinesCleared,
 			accuracy: stats.finalAccuracy,
 			three_bv: stats.threeBV,
-			three_bv_per_sec: threeBvPerSec
+			three_bv_per_sec: parseFloat((stats.threeBV / timeTaken).toFixed(2))
+		};
+
+		const {
+			data: { session }
+		} = await supabase.auth.getSession();
+
+		// Always persist locally so the dashboard and personal bests work offline and in guest mode
+		const localResult = saveLocalGameResult({
+			...result,
+			user_id: session?.user?.id || null,
+			sync_pending: true
 		});
 
 		if (session?.user) {
@@ -724,17 +720,18 @@
 		}
 
 		const { error } = await supabase.from('game_results').insert({
-			user_id: session?.user?.id || null,
-			mode: game.mode,
-			setting: settingLabel,
-			win,
-			time: timeTaken,
-			grids: gridsCount,
-			total_mines: totalMinesCleared,
-			accuracy: stats.finalAccuracy
+			...result,
+			id: localResult.id,
+			created_at: localResult.created_at,
+			user_id: session?.user?.id || null
 		});
 		if (error) console.error('Error saving result:', error);
+		else markLocalGameResultSynced(localResult.id);
 	}
+
+	onDestroy(() => {
+		if (game.timerInterval) clearInterval(game.timerInterval);
+	});
 
 	onMount(async () => {
 		const {
@@ -774,7 +771,7 @@
 	{#if game.state === 'finished'}
 		<ResultView
 			win={stats.isWin}
-			time={game.mode === 'time' ? Math.max(1, game.timeLimit - game.timer) : game.timer}
+			time={game.elapsed}
 			cells={stats.cellsRevealed}
 			totalClicks={stats.clicks}
 			history={stats.history}
@@ -783,7 +780,7 @@
 			sizeLabel={game.mode === 'time' ? `${game.timeLimit}s` : game.size.label}
 			gridsSolved={stats.gridsSolved}
 			mode={game.mode}
-			totalMines={stats.sessionTotalMines}
+			totalMines={stats.gridsSolved * game.size.mines}
 			threeBV={stats.threeBV}
 			restart={fullReset}
 		/>
