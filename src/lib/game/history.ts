@@ -35,7 +35,12 @@ export function mergeGameResults(
 	const matchCounts = new Map<string, number>();
 	// older uploads used unrelated ids; only collapse unambiguous copies close in time
 	for (const result of results.values()) {
-		if (result.replay_version === 1 || sharedIds.has(result.id)) continue;
+		if (
+			result.replay_version === 1 ||
+			result.sync_pending !== undefined ||
+			sharedIds.has(result.id)
+		)
+			continue;
 		const candidates = (legacyRemote.get(legacyKey(result)) ?? []).filter((candidate) => {
 			const delay = Date.parse(candidate.created_at) - Date.parse(result.created_at);
 			return delay >= 0 && delay <= 5000;

@@ -1,5 +1,5 @@
 import {
-	calculate3BV,
+	calculateSolved3BV,
 	countFlagsAround,
 	createGrid,
 	DIRECTIONS,
@@ -73,6 +73,7 @@ export function validateReplay(submission: unknown): Validation {
 	let actionCount = 0;
 	let previousTime = 0;
 	let solved = 0;
+	let played = 0;
 	let errors = 0;
 	let threeBV = 0;
 	let lost = false;
@@ -136,9 +137,12 @@ export function validateReplay(submission: unknown): Validation {
 		}
 		if (!pending && firstReveal) return reject('Missing first reveal.');
 		const wrongFlags = grid.flat().filter((cell) => cell.isFlagged && !cell.isMine).length;
-		errors += wrongFlags + (lost ? 1 : 0);
+		if (!pending) {
+			played++;
+			errors += wrongFlags + (lost ? 1 : 0);
+			threeBV += calculateSolved3BV(grid);
+		}
 		if (cleared) solved++;
-		if (!timed || cleared) threeBV += calculate3BV(grid);
 		if (!lastBoard && !cleared)
 			return reject('Only cleared boards may be followed by another board.');
 		if (timed && lastBoard && cleared)
@@ -150,24 +154,17 @@ export function validateReplay(submission: unknown): Validation {
 		return reject('Timed run ended before its limit.');
 	if ((!timed || lost) && duration - previousTime > 1000)
 		return reject('Replay continues after the final move.');
-	const time = timed
-		? win
-			? timeLimit
-			: Math.max(1, Math.floor(duration / 1000))
-		: Math.floor(duration / 1000);
+	const time = Math.max(0.001, timed ? Math.min(duration / 1000, timeLimit) : duration / 1000);
 	const expected: SubmittedGameResult = {
 		mode: result.mode,
 		setting: result.setting,
 		win,
 		time,
 		grids: solved,
-		total_mines: win ? solved * mines : 0,
-		accuracy: Math.max(
-			0,
-			Math.round(((boards.length * mines - errors) / (boards.length * mines)) * 100)
-		),
+		total_mines: solved * mines,
+		accuracy: Math.max(0, Math.round(((played * mines - errors) / (played * mines)) * 100)),
 		three_bv: threeBV,
-		three_bv_per_sec: Number((threeBV / Math.max(1, time)).toFixed(2))
+		three_bv_per_sec: Number((threeBV / time).toFixed(2))
 	};
 	for (const key of Object.keys(expected) as (keyof SubmittedGameResult)[]) {
 		if (result[key] !== expected[key]) return reject(`Result does not match replay: ${key}.`);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
 import {
 	calculate3BV,
+	calculateSolved3BV,
 	createGrid,
 	DIRECTIONS,
 	revealCell,
@@ -74,7 +75,7 @@ function board(outcome: 'clear' | 'loss' | 'partial' | 'chord' = 'clear', offset
 		replay.actions.push({ type: 'reveal', r: 8, c: 0, t: offset + 500 });
 		revealCell(grid, 8, 0);
 	}
-	return { replay, threeBV: calculate3BV(grid) };
+	return { replay, threeBV: calculateSolved3BV(grid), totalThreeBV: calculate3BV(grid) };
 }
 
 function standard(outcome: 'clear' | 'loss' | 'chord' = 'clear'): Submission {
@@ -86,18 +87,20 @@ function standard(outcome: 'clear' | 'loss' | 'chord' = 'clear'): Submission {
 			mode: 'standard',
 			setting: '9x9',
 			win,
-			time: 0,
+			time: 0.5,
 			grids: win ? 1 : 0,
 			total_mines: win ? 10 : 0,
 			accuracy: win ? 100 : 90,
 			three_bv: threeBV,
-			three_bv_per_sec: threeBV
+			three_bv_per_sec: threeBV * 2
 		}
 	};
 }
 
 function timed(pending = false): Submission {
 	const cleared = board();
+	const final = pending ? { mines: null, actions: [] } : board('partial', 1000).replay;
+	const threeBV = cleared.threeBV + (pending ? 0 : board('partial').threeBV);
 	return {
 		replay: {
 			version: 1,
@@ -105,10 +108,7 @@ function timed(pending = false): Submission {
 			cols: 9,
 			mines: 10,
 			duration_ms: 15_000,
-			boards: [
-				cleared.replay,
-				pending ? { mines: null, actions: [] } : board('partial', 1000).replay
-			]
+			boards: [cleared.replay, final]
 		},
 		result: {
 			mode: 'time',
@@ -118,8 +118,8 @@ function timed(pending = false): Submission {
 			grids: 1,
 			total_mines: 10,
 			accuracy: 100,
-			three_bv: cleared.threeBV,
-			three_bv_per_sec: Number((cleared.threeBV / 15).toFixed(2))
+			three_bv: threeBV,
+			three_bv_per_sec: Number((threeBV / 15).toFixed(2))
 		}
 	};
 }
@@ -147,14 +147,49 @@ describe('replay validation', () => {
 		accepted(timed());
 		accepted(timed(true));
 	});
+	it('preserves millisecond precision and subsecond 3BV/s', () => {
+		for (const duration of [0, 1, 333, 1234]) {
+			const submission = standard();
+			submission.replay.duration_ms = duration;
+			for (const action of submission.replay.boards[0].actions)
+				action.t = Math.min(action.t, duration);
+			submission.result.time = Math.max(0.001, duration / 1000);
+			submission.result.three_bv_per_sec = Number(
+				(submission.result.three_bv / submission.result.time).toFixed(2)
+			);
+			accepted(submission);
+			submission.result.time = Math.floor(submission.result.time);
+			rejected(submission, /time/);
+		}
+	});
+	it('counts only revealed 3BV on losses and includes partial timed progress', () => {
+		const loss = standard('loss');
+		const partial = board('partial');
+		assert.ok(loss.result.three_bv > 0);
+		assert.ok(loss.result.three_bv < partial.totalThreeBV);
+		assert.equal(timed().result.three_bv, timed(true).result.three_bv + partial.threeBV);
+		accepted(loss);
+		loss.result.three_bv = partial.totalThreeBV;
+		loss.result.three_bv_per_sec = partial.totalThreeBV / loss.result.time;
+		rejected(loss, /three_bv/);
+	});
 	it('accepts a timed loss before clearing any boards', () => {
 		const submission = standard('loss');
 		Object.assign(submission.result, {
 			mode: 'time',
+			setting: '15'
+		});
+		accepted(submission);
+	});
+	it('caps timed loss duration when processing the last move crosses the cutoff', () => {
+		const submission = standard('loss');
+		submission.replay.boards[0].actions.at(-1)!.t = 14_999;
+		submission.replay.duration_ms = 15_001;
+		Object.assign(submission.result, {
+			mode: 'time',
 			setting: '15',
-			time: 1,
-			three_bv: 0,
-			three_bv_per_sec: 0
+			time: 15,
+			three_bv_per_sec: Number((submission.result.three_bv / 15).toFixed(2))
 		});
 		accepted(submission);
 	});
@@ -165,18 +200,21 @@ describe('replay validation', () => {
 		submission.replay.duration_ms = 1500;
 		Object.assign(submission.result, {
 			win: false,
-			time: 1,
-			total_mines: 0,
+			time: 1.5,
 			accuracy: 90,
-			three_bv_per_sec: submission.result.three_bv
+			three_bv_per_sec: Number((submission.result.three_bv / 1.5).toFixed(2))
 		});
+		assert.equal(submission.result.total_mines, 10);
 		accepted(submission);
+		submission.result.total_mines = 0;
+		rejected(submission, /total_mines/);
 	});
 	it('retains pending flags and clears them when the next board starts', () => {
 		const pending = timed(true);
 		pending.replay.boards[1].actions.push({ type: 'flag', r: 1, c: 1, t: 1000 });
-		pending.result.accuracy = 95;
 		accepted(pending);
+		pending.result.accuracy = 95;
+		rejected(pending, /accuracy/);
 		const started = timed();
 		started.replay.boards[1].actions.unshift({ type: 'flag', r: 1, c: 1, t: 900 });
 		accepted(started);
@@ -306,12 +344,13 @@ describe('replay validation', () => {
 			recorder.record('flag', 3, 3, timestamp);
 			const submission = timed();
 			submission.replay = recorder.finish();
+			const threeBV = board('partial').threeBV;
 			Object.assign(submission.result, {
 				grids: 0,
 				total_mines: 0,
 				accuracy: 90,
-				three_bv: 0,
-				three_bv_per_sec: 0
+				three_bv: threeBV,
+				three_bv_per_sec: Number((threeBV / 15).toFixed(2))
 			});
 			accepted(submission);
 		} finally {
@@ -410,6 +449,25 @@ describe('local and remote history', () => {
 			remote,
 			first
 		]);
+	});
+	it('keeps records with sync metadata distinct from legacy uploads with different IDs', () => {
+		const remote = {
+			...standard().result,
+			id: 'legacy-remote',
+			user_id: 'user',
+			created_at: '2026-10-31T10:00:01Z'
+		};
+		for (const sync_pending of [true, false]) {
+			const local = {
+				...remote,
+				id: GAME_ID,
+				created_at: '2026-10-31T10:00:00Z',
+				sync_pending
+			};
+			assert.deepEqual(mergeGameResults([remote], [local], 'user'), [remote, local]);
+			const uploaded = { ...remote, id: GAME_ID };
+			assert.deepEqual(mergeGameResults([uploaded], [local], 'user'), [uploaded]);
+		}
 	});
 	it('scopes local fallback history to the known account after a remote query failure', () => {
 		const own = {
@@ -567,6 +625,7 @@ describe('submission boundary', () => {
 		const changed = standard();
 		changed.replay.duration_ms = 1000;
 		changed.result.time = 1;
+		changed.result.three_bv_per_sec = changed.result.three_bv;
 		accepted(changed);
 		assert.equal((await submitGame(request(changed), client)).status, 409);
 		assert.deepEqual(replays.get(GAME_ID)!.submission, { id: GAME_ID, ...submission });

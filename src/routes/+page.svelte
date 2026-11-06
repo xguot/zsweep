@@ -1,8 +1,6 @@
 <script lang="ts">
 	import confetti from 'canvas-confetti';
 	import {
-		Grid3x3,
-		Wrench,
 		Hourglass,
 		Infinity as InfinityIcon,
 		Mail,
@@ -14,10 +12,10 @@
 		createGrid,
 		placeMines,
 		revealCell,
-		DIRECTIONS,
 		revealCellsAround,
 		countFlagsAround,
 		calculate3BV,
+		calculateSolved3BV,
 		type Cell
 	} from '$lib/minesweeper';
 
@@ -25,7 +23,8 @@
 		supabase,
 		ensureUserProfile,
 		saveLocalGameResult,
-		setLocalGameResultUser
+		setLocalGameResultUser,
+		markLocalGameResultSynced
 	} from '$lib/supabase';
 	import { resolve } from '$app/paths';
 	import { ReplayRecorder } from '$lib/game/recording';
@@ -40,7 +39,7 @@
 	import ResultView from '$lib/components/ResultView.svelte';
 	import CustomSettingsModal from '$lib/components/CustomSettingsModal.svelte';
 	import TutorialModal from '$lib/components/TutorialModal.svelte';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import { zenMode } from '$lib/zenStore.svelte';
 	import { lineNumbers } from '$lib/lineNumberStore.svelte';
 
@@ -55,6 +54,8 @@
 		timeLimits: [15, 30, 60]
 	};
 
+	let standardSize = GAME_CONFIG.gridSizes[0];
+
 	let game = $state({
 		mode: 'standard' as 'time' | 'standard',
 		size: GAME_CONFIG.gridSizes[0],
@@ -63,6 +64,7 @@
 		grid: [] as Cell[][],
 		minesLeft: 0,
 		timer: 0,
+		elapsed: 0,
 		timerInterval: undefined as ReturnType<typeof setInterval> | undefined,
 		isFirstClick: true
 	});
@@ -97,7 +99,6 @@
 
 	let stats = $state({
 		clicks: 0,
-		clicksThisSecond: 0,
 		history: [] as number[],
 		isWin: false,
 		gridsSolved: 0,
@@ -177,10 +178,14 @@
 	}
 
 	function setMode(mode: 'time' | 'standard') {
-		game.mode = mode;
-		if (game.mode === 'time' && game.size.label !== '9x9') {
+		if (game.mode === mode) return;
+		if (mode === 'time') {
+			standardSize = game.size;
 			game.size = GAME_CONFIG.gridSizes[0];
+		} else {
+			game.size = standardSize;
 		}
+		game.mode = mode;
 		fullReset();
 	}
 
@@ -209,9 +214,9 @@
 		stats.threeBV = 0;
 		stats.isWin = false;
 		stats.history = [];
-		stats.clicksThisSecond = 0;
 
 		game.timer = game.mode === 'time' ? game.timeLimit : 0;
+		game.elapsed = 0;
 		if (game.timerInterval) clearInterval(game.timerInterval);
 
 		recording = new ReplayRecorder(game.size.rows, game.size.cols, game.size.mines);
@@ -234,47 +239,51 @@
 		input.lastKey = '';
 	}
 
+	function elapsedSeconds(timestamp = recording.elapsed()) {
+		const elapsed = timestamp / 1000;
+		return game.mode === 'time' ? Math.min(elapsed, game.timeLimit) : elapsed;
+	}
+
+	function updateTimer(timestamp = recording.elapsed()) {
+		if (game.state !== 'playing') return false;
+		game.elapsed = elapsedSeconds(timestamp);
+		game.timer =
+			game.mode === 'time' ? Math.ceil(game.timeLimit - game.elapsed) : Math.floor(game.elapsed);
+		if (game.mode === 'time' && game.elapsed >= game.timeLimit) {
+			finishSession(true);
+			return true;
+		}
+		return false;
+	}
+
+	function recordAction(timestamp: number) {
+		const second = game.state === 'playing' ? Math.floor(elapsedSeconds(timestamp)) : 0;
+		while (stats.history.length <= second) stats.history.push(0);
+		stats.history[second]++;
+		stats.clicks++;
+	}
+
 	function startSession() {
 		if (game.state === 'playing') return;
 		game.state = 'playing';
-		game.timerInterval = setInterval(() => {
-			const elapsed = Math.floor(recording.elapsed() / 1000);
-			game.timer = game.mode === 'time' ? Math.max(0, game.timeLimit - elapsed) : elapsed;
-
-			stats.history = [...stats.history, stats.clicksThisSecond];
-			stats.clicksThisSecond = 0;
-
-			if (game.mode === 'time' && game.timer <= 0) finishSession(true);
-		}, 1000);
+		game.timerInterval = setInterval(updateTimer, 100);
 	}
 
 	function finishSession(win: boolean) {
-		if (game.state === 'finished') return;
-		const elapsed = Math.floor(recording.elapsed() / 1000);
-		game.timer = game.mode === 'time' ? Math.max(0, game.timeLimit - elapsed) : elapsed;
+		if (game.state !== 'playing') return;
+		game.elapsed = Math.max(0.001, elapsedSeconds());
 		game.state = 'finished';
 		stats.isWin = win;
 		if (game.timerInterval) clearInterval(game.timerInterval);
-		if (stats.clicksThisSecond > 0) {
-			stats.history = [...stats.history, stats.clicksThisSecond];
-		}
+		while (stats.history.length < Math.ceil(game.elapsed)) stats.history.push(0);
 
-		if (game.mode === 'standard') {
-			stats.gridsPlayed = 1;
-			stats.sessionTotalMines = game.size.mines;
-			stats.cellsRevealed = win
-				? game.size.rows * game.size.cols - game.size.mines
-				: countCurrentSafeOpen();
-			if (!game.isFirstClick && game.grid.length > 0) {
-				stats.threeBV = calculate3BV(game.grid);
-			}
-		} else {
+		if (!game.isFirstClick) {
 			stats.cellsRevealed += countCurrentSafeOpen();
 			stats.sessionTotalMines += game.size.mines;
 			stats.gridsPlayed++;
+			stats.threeBV += calculateSolved3BV(game.grid);
+			stats.sessionErrors += countWrongFlags();
 		}
-
-		stats.sessionErrors += countWrongFlags();
 		stats.finalAccuracy = calculateAccuracy();
 		game.grid = [...game.grid];
 		if (win) triggerWin();
@@ -305,18 +314,10 @@
 		);
 	}
 
-	function timeExpired(elapsed: number) {
-		if (game.mode !== 'time' || game.state !== 'playing') return false;
-		if (elapsed < game.timeLimit * 1000) return false;
-		finishSession(true);
-		return true;
-	}
-
 	function handleClick(r: number, c: number) {
 		const timestamp = recording.elapsed();
-		if (game.state === 'finished' || timeExpired(timestamp) || game.grid[r][c].isFlagged) return;
-		stats.clicks++;
-		stats.clicksThisSecond++;
+		if (game.state === 'finished' || game.grid[r][c].isFlagged) return;
+		if (game.state === 'playing' && updateTimer(timestamp)) return;
 
 		if (game.isFirstClick) {
 			game.isFirstClick = false;
@@ -332,6 +333,8 @@
 		}
 		recording.record('reveal', r, c, timestamp);
 
+		recordAction(timestamp);
+
 		const canChord =
 			game.grid[r][c].isOpen && countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
 
@@ -342,7 +345,7 @@
 		if (result.gameOver) {
 			triggerExplosion();
 			stats.sessionErrors += 1;
-			revealFinalBoard(r, c);
+			revealFinalBoard(result.exploded!.r, result.exploded!.c);
 			finishSession(false);
 		} else {
 			checkWin();
@@ -351,32 +354,20 @@
 
 	function toggleFlag(r: number, c: number) {
 		const timestamp = recording.elapsed();
-		if (game.state === 'finished' || timeExpired(timestamp) || game.grid[r][c].isOpen) return;
-		if (game.state === 'playing') recording.record('flag', r, c, timestamp);
+		if (game.state === 'playing') updateTimer(timestamp);
+		if (game.state === 'finished' || game.grid[r][c].isOpen) return;
+		if (game.state === 'playing') {
+			recording.record('flag', r, c, timestamp);
+			recordAction(timestamp);
+		}
 		game.grid[r][c].isFlagged = !game.grid[r][c].isFlagged;
 		game.minesLeft += game.grid[r][c].isFlagged ? -1 : 1;
-		stats.clicks++;
-		stats.clicksThisSecond++;
-		game.grid = game.grid;
+		game.grid = [...game.grid];
 	}
 
 	function attemptChord(r: number, c: number) {
-		const cell = game.grid[r][c];
-		let flagCount = 0;
-		DIRECTIONS.forEach(([dr, dc]) => {
-			if (game.grid[r + dr]?.[c + dc]?.isFlagged) flagCount++;
-		});
-		if (flagCount === cell.neighborCount) {
-			stats.clicks++;
-			stats.clicksThisSecond++;
-			DIRECTIONS.forEach(([dr, dc]) => {
-				const nr = r + dr,
-					nc = c + dc;
-				if (game.grid[nr]?.[nc] && !game.grid[nr][nc].isOpen && !game.grid[nr][nc].isFlagged) {
-					handleClick(nr, nc);
-				}
-			});
-		}
+		if (countFlagsAround(game.grid, r, c) !== game.grid[r][c].neighborCount) return;
+		handleClick(r, c);
 	}
 
 	function applyAction(type: string, r: number, c: number) {
@@ -712,29 +703,26 @@
 	async function saveResult(win: boolean) {
 		// Snapshot before auth or network calls so restarting cannot change this submission.
 		const replay = recording.finish();
-		const timeTaken =
-			game.mode === 'standard'
-				? Math.floor(replay.duration_ms / 1000)
-				: win
-					? game.timeLimit
-					: Math.max(1, Math.floor(replay.duration_ms / 1000));
+		const timeTaken = Math.max(0.001, elapsedSeconds(replay.duration_ms));
+		game.elapsed = timeTaken;
 		const result = {
 			mode: game.mode,
 			setting: game.mode === 'time' ? game.timeLimit.toString() : game.size.label,
 			win,
 			time: timeTaken,
 			grids: stats.gridsSolved,
-			total_mines: win ? stats.gridsSolved * game.size.mines : 0,
+			total_mines: stats.gridsSolved * game.size.mines,
 			accuracy: stats.finalAccuracy,
 			three_bv: stats.threeBV,
-			three_bv_per_sec: Number((stats.threeBV / Math.max(1, timeTaken)).toFixed(2))
+			three_bv_per_sec: Number((stats.threeBV / timeTaken).toFixed(2))
 		};
 
 		// Keep local history available even when auth or submission is unavailable.
 		const localResult = saveLocalGameResult({
 			...result,
 			user_id: sessionUserId,
-			replay_version: replay.version
+			replay_version: replay.version,
+			sync_pending: true
 		});
 		try {
 			const {
@@ -753,10 +741,15 @@
 				body: JSON.stringify({ id: localResult.id, result, replay })
 			});
 			if (!response.ok) console.error('Error saving result:', await response.json());
+			else markLocalGameResultSynced(localResult.id);
 		} catch (error) {
 			console.error('Error saving result:', error);
 		}
 	}
+
+	onDestroy(() => {
+		if (game.timerInterval) clearInterval(game.timerInterval);
+	});
 
 	onMount(async () => {
 		const {
@@ -791,13 +784,13 @@
 
 <div
 	class="relative flex flex-1 flex-col items-center bg-bg font-mono text-text transition-all duration-500 {zenMode.value
-		? 'fixed inset-0 justify-center'
+		? 'fixed inset-0 overflow-y-auto [justify-content:safe_center]'
 		: ''}"
 >
 	{#if game.state === 'finished'}
 		<ResultView
 			win={stats.isWin}
-			time={game.mode === 'time' ? Math.max(1, game.timeLimit - game.timer) : game.timer}
+			time={game.elapsed}
 			cells={stats.cellsRevealed}
 			totalClicks={stats.clicks}
 			history={stats.history}
@@ -806,67 +799,76 @@
 			sizeLabel={game.mode === 'time' ? `${game.timeLimit}s` : game.size.label}
 			gridsSolved={stats.gridsSolved}
 			mode={game.mode}
-			totalMines={stats.sessionTotalMines}
+			totalMines={stats.gridsSolved * game.size.mines}
 			threeBV={stats.threeBV}
 			restart={fullReset}
 		/>
 	{:else}
 		<div
-			class="mb-8 flex max-w-[calc(100%-2rem)] select-none flex-wrap items-center justify-center gap-x-4 gap-y-3 rounded-lg bg-sub/10 px-4 py-3 text-xs transition-all duration-300 sm:gap-x-6 sm:py-2 {game.state ===
+			class="mb-8 flex max-w-[calc(100%-2rem)] select-none flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-lg bg-sub/10 px-4 py-2 text-xs transition-opacity duration-200 motion-reduce:transition-none {game.state ===
 				'playing' || zenMode.value
-				? 'pointer-events-none opacity-0'
+				? zenMode.value
+					? 'hidden'
+					: 'pointer-events-none opacity-0'
 				: 'opacity-100'}"
 		>
-			<div class="flex items-center gap-3">
-				<button
-					class="flex items-center gap-2 transition-colors {game.mode === 'standard'
-						? 'font-bold text-main'
-						: 'text-sub hover:text-text'}"
-					onclick={() => setMode('standard')}
-				>
-					<InfinityIcon size={12} /><span>standard</span>
-				</button>
-				<button
-					class="flex items-center gap-2 transition-colors {game.mode === 'time'
-						? 'font-bold text-main'
-						: 'text-sub hover:text-text'}"
-					onclick={() => setMode('time')}
-				>
-					<Hourglass size={12} /><span>time</span>
-				</button>
+			<div class="flex items-center gap-4" role="group" aria-label="Game mode">
+				{#each ['standard', 'time'] as mode (mode)}
+					<button
+						class="flex min-h-7 items-center gap-2 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-text {game.mode ===
+						mode
+							? 'border-text font-semibold text-text'
+							: 'border-transparent text-text/50 hover:text-text'}"
+						aria-pressed={game.mode === mode}
+						onclick={() => setMode(mode as 'standard' | 'time')}
+					>
+						{#if mode === 'standard'}<InfinityIcon size={12} />{:else}<Hourglass size={12} />{/if}
+						{mode}
+					</button>
+				{/each}
 			</div>
 
-			<div class="hidden h-3 w-[1px] bg-sub/20 sm:block"></div>
+			<div class="hidden h-4 w-px bg-text/15 sm:block"></div>
 
-			<div class="flex items-center gap-3">
+			<div
+				class="flex items-center gap-4"
+				role="group"
+				aria-label={game.mode === 'standard' ? 'Board size' : 'Time limit'}
+			>
 				{#if game.mode === 'standard'}
-					<Grid3x3 size={12} class="text-sub opacity-50" />
 					{#each GAME_CONFIG.gridSizes as size (size.label)}
 						<button
-							class={game.size.label === size.label
-								? 'font-bold text-main'
-								: 'text-sub hover:text-text'}
+							class="min-h-7 w-10 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text {game
+								.size.label === size.label
+								? 'border-text font-semibold text-text'
+								: 'border-transparent text-text/50 hover:text-text'}"
+							aria-pressed={game.size.label === size.label}
 							onclick={() => setSize(size)}>{size.label}</button
 						>
 					{/each}
 				{:else}
-					<Hourglass size={12} class="text-sub opacity-50" />
 					{#each GAME_CONFIG.timeLimits as t (t)}
 						<button
-							class={game.timeLimit === t ? 'font-bold text-main' : 'text-sub hover:text-text'}
+							class="min-h-7 w-10 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text {game.timeLimit ===
+							t
+								? 'border-text font-semibold text-text'
+								: 'border-transparent text-text/50 hover:text-text'}"
+							aria-pressed={game.timeLimit === t}
 							onclick={() => setTime(t)}>{t}s</button
 						>
 					{/each}
 				{/if}
-
-				<div class="mx-1 h-3 w-[1px] bg-sub/20"></div>
-
 				<button
-					class="text-sub transition-colors hover:text-main"
+					class="min-h-7 border-b-2 pt-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text {(game.mode ===
+						'standard' &&
+						game.size.label === 'Custom') ||
+					(game.mode === 'time' && !GAME_CONFIG.timeLimits.includes(game.timeLimit))
+						? 'border-text font-semibold text-text'
+						: 'border-transparent text-text/50 hover:text-text'}"
 					onclick={openCustomModal}
-					title="Custom Settings"
+					aria-label={game.mode === 'standard' ? 'Custom board settings' : 'Custom time limit'}
 				>
-					<Wrench size={12} />
+					custom
 				</button>
 			</div>
 		</div>
@@ -929,7 +931,7 @@
 		</div>
 		<div
 			class="flex items-center justify-center gap-3 px-4 text-xs leading-5 text-text/60 transition-opacity duration-300 sm:gap-6 {zenMode.value
-				? 'pointer-events-none opacity-0'
+				? 'hidden'
 				: 'opacity-100'}"
 		>
 			<button
@@ -980,7 +982,7 @@
 
 	<footer
 		class="mt-auto flex w-full flex-col items-center gap-6 px-4 pb-8 pt-12 text-xs text-sub transition-all duration-300 {zenMode.value
-			? 'pointer-events-none opacity-0'
+			? 'hidden'
 			: 'opacity-100'}"
 	>
 		<div class="flex flex-wrap justify-center gap-8 opacity-60">

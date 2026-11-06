@@ -26,6 +26,7 @@ export interface StoredGameResult {
 	replay_version?: number;
 	replay_id?: string | null;
 	created_at: string;
+	sync_pending?: boolean;
 }
 
 const LOCAL_RESULTS_KEY = 'zsweep_game_history';
@@ -79,6 +80,18 @@ export function setLocalGameResultUser(id: string, userId: string | null) {
 		localStorage.setItem(LOCAL_RESULTS_KEY, JSON.stringify(results));
 	} catch (error) {
 		console.error('Failed to update local game result:', error);
+	}
+}
+
+export function markLocalGameResultSynced(id: string) {
+	if (!browser) return;
+	try {
+		const results = getLocalGameResults().map((result) =>
+			result.id === id ? { ...result, sync_pending: false } : result
+		);
+		localStorage.setItem(LOCAL_RESULTS_KEY, JSON.stringify(results));
+	} catch (e) {
+		console.error('Failed to update local game result:', e);
 	}
 }
 

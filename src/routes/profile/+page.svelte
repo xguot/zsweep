@@ -113,7 +113,8 @@
 			mode,
 			setting,
 			win: Boolean(g.win),
-			time: Math.max(1, safeNum(g.time || (mode === 'time' ? parseInt(setting, 10) || 15 : 1))),
+			time:
+				safeNum(g.time) > 0 ? safeNum(g.time) : mode === 'time' ? parseInt(setting, 10) || 15 : 1,
 			grids,
 			total_mines: totalMines,
 			accuracy: safeNum(g.accuracy),
@@ -152,9 +153,9 @@
 		list.forEach((g) => {
 			totalSeconds += g.time;
 
+			minesSweptCount += g.total_mines;
 			if (g.win) {
-				minesSweptCount += g.total_mines;
-				const mpm = parseFloat(((g.total_mines / Math.max(1, g.time)) * 60).toFixed(1));
+				const mpm = parseFloat(((g.total_mines / Math.max(0.001, g.time)) * 60).toFixed(1));
 
 				if (
 					g.mode === 'time' &&
@@ -182,7 +183,7 @@
 					if (bestStdNumeric[g.setting] === undefined || clearTime < bestStdNumeric[g.setting]) {
 						bestStdNumeric[g.setting] = clearTime;
 						stdBests[g.setting] = {
-							primary: `${clearTime}s`,
+							primary: `${Number(clearTime.toFixed(2))}s`,
 							secondary: `${mpm} mpm`,
 							acc: g.accuracy,
 							date: g.created_at,
@@ -199,7 +200,9 @@
 		const m = Math.floor((totalSeconds % 3600) / 60)
 			.toString()
 			.padStart(2, '0');
-		const s = (totalSeconds % 60).toString().padStart(2, '0');
+		const s = Math.floor(totalSeconds % 60)
+			.toString()
+			.padStart(2, '0');
 
 		// Calculate active daily streak
 		const uniqueDates = new Set(list.map((g) => g.created_at.split('T')[0]));
@@ -672,7 +675,7 @@
 								{#each filteredHistory.slice(0, ui.visibleRows) as row (row.id)}
 									{@const rowMpm =
 										row.win && row.total_mines > 0
-											? ((row.total_mines / Math.max(1, row.time)) * 60).toFixed(1)
+											? ((row.total_mines / Math.max(0.001, row.time)) * 60).toFixed(1)
 											: '-'}
 									<tr class="transition-colors hover:bg-bg/40">
 										<td class="px-4 py-3 font-bold text-text">
@@ -691,7 +694,7 @@
 											</span>
 										</td>
 										<td class="px-4 py-3 font-mono text-text">
-											{row.mode === 'time' ? row.grids : row.time}<span
+											{row.mode === 'time' ? row.grids : Number(row.time.toFixed(2))}<span
 												class="ml-1 text-[10px] text-sub opacity-60"
 												>{row.mode === 'time' ? 'grids' : 's'}</span
 											>
