@@ -1,13 +1,6 @@
 <script lang="ts">
 	import confetti from 'canvas-confetti';
-	import {
-		Hourglass,
-		Infinity as InfinityIcon,
-		Mail,
-		Github,
-		Twitter,
-		Coffee
-	} from 'lucide-svelte';
+	import { Hourglass, Infinity as InfinityIcon, Mail, Github, Coffee } from 'lucide-svelte';
 	import {
 		createGrid,
 		placeMines,
@@ -986,16 +979,6 @@
 			>
 				<Github size={14} />
 				<span>github</span>
-			</a>
-
-			<a
-				href="https://x.com/ougoot"
-				target="_blank"
-				rel="noreferrer"
-				class="flex items-center gap-2 transition-colors hover:text-text"
-			>
-				<Twitter size={14} />
-				<span>twitter</span>
 			</a>
 		</div>
 
