@@ -72,8 +72,8 @@
 		const accentRgb = win ? theme.colors.main : theme.colors.error;
 		const subRgb = theme.colors.sub;
 		const lineColor = `rgb(${accentRgb})`;
-		const fillColor = `rgb(${accentRgb} / 0.12)`;
-		const gridColor = `rgb(${subRgb} / 0.12)`;
+		const fillColor = `rgb(${accentRgb} / 0.06)`;
+		const gridColor = `rgb(${subRgb} / 0.1)`;
 		const tickColor = `rgb(${subRgb} / 0.6)`;
 
 		chartInstance = new Chart(chartCanvas, {
@@ -87,44 +87,72 @@
 						borderColor: lineColor,
 						backgroundColor: fillColor,
 						fill: true,
-						tension: 0.35,
-						pointRadius: 2,
+						tension: 0.5,
+						pointRadius: 1,
 						pointHoverRadius: 4,
-						borderWidth: 2
+						borderWidth: 3,
+						pointHitRadius: 12
 					}
 				]
 			},
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				interaction: { intersect: false, mode: 'index' },
 				plugins: {
 					legend: { display: false },
 					tooltip: {
 						enabled: true,
-						backgroundColor: `rgb(${theme.colors.bg})`,
+						animation: { duration: 250 },
+						backgroundColor: `rgb(${theme.colors.bg} / 0.95)`,
 						titleColor: `rgb(${theme.colors.sub})`,
 						bodyColor: `rgb(${theme.colors.text})`,
 						borderColor: `rgb(${theme.colors.sub} / 0.2)`,
 						borderWidth: 1,
+						cornerRadius: 6,
+						padding: 10,
+						titleFont: { family: 'JetBrains Mono, monospace', size: 11 },
+						bodyFont: { family: 'JetBrains Mono, monospace', size: 12 },
+						callbacks: {
+							title: (items) => `time: ${items[0].label}`,
+							label: (item) => `actions/s: ${item.formattedValue}`
+						},
 						displayColors: false
 					}
 				},
 				scales: {
 					x: {
-						grid: { color: gridColor },
+						title: {
+							display: true,
+							text: 'time (seconds)',
+							color: tickColor,
+							font: { family: 'JetBrains Mono, monospace', size: 10 }
+						},
+						grid: { color: gridColor, drawTicks: false },
+						border: { display: false },
 						ticks: {
 							color: tickColor,
 							font: { family: 'JetBrains Mono, monospace', size: 10 },
-							maxTicksLimit: 8
+							maxTicksLimit: 8,
+							padding: 10
 						}
 					},
 					y: {
+						title: {
+							display: true,
+							text: 'actions per second',
+							color: tickColor,
+							font: { family: 'JetBrains Mono, monospace', size: 10 }
+						},
 						beginAtZero: true,
-						grid: { color: gridColor },
+						grid: { color: gridColor, drawTicks: false },
+						border: { display: false },
 						ticks: {
 							color: tickColor,
 							font: { family: 'JetBrains Mono, monospace', size: 10 },
-							precision: 0
+							precision: 0,
+							maxTicksLimit: 5,
+							padding: 10
 						}
 					}
 				},
@@ -150,9 +178,9 @@
 {/if}
 
 <div
-	class="animate-in fade-in flex min-h-[55vh] w-full max-w-4xl flex-col justify-center gap-10 px-6 duration-300"
+	class="animate-in fade-in flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-6 py-10 duration-300"
 >
-	<div class="grid w-full grid-cols-1 items-center gap-8 md:grid-cols-[200px_1fr]">
+	<div class="grid w-full grid-cols-1 items-center gap-8 md:grid-cols-[170px_1fr]">
 		<div class="flex flex-row justify-between gap-6 md:flex-col">
 			<div>
 				<div class="mb-1 flex items-center gap-2">
@@ -182,12 +210,12 @@
 			</div>
 		</div>
 
-		<div class="relative h-[200px] w-full rounded-lg border border-sub/10 bg-sub/5 p-4">
+		<div class="relative h-[220px] w-full">
 			<canvas bind:this={chartCanvas}></canvas>
 		</div>
 	</div>
 
-	<div class="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-6">
+	<div class="mt-4 grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:flex md:justify-between">
 		<div class="flex flex-col">
 			<span class="mb-1 text-xs font-bold lowercase text-sub opacity-60">test type</span>
 			<span class="text-sm font-bold leading-tight text-main">
@@ -229,7 +257,7 @@
 	<div class="mt-2 flex items-center justify-center gap-6">
 		<button
 			type="button"
-			class="flex items-center gap-2 rounded-lg bg-sub/10 px-5 py-2.5 text-xs font-bold text-sub transition-colors hover:bg-sub/20 hover:text-text"
+			class="flex h-11 items-center gap-2 rounded-lg bg-sub/10 px-5 text-xs font-bold text-sub transition-colors hover:bg-sub/20 hover:text-text"
 			onclick={restart}
 			title="Next Test (Tab)"
 		>
@@ -241,7 +269,7 @@
 		{#if finalGrid.length > 0}
 			<button
 				type="button"
-				class="flex items-center gap-2 rounded-lg bg-sub/10 px-5 py-2.5 text-xs font-bold text-sub transition-colors hover:bg-main hover:text-bg"
+				class="flex h-11 items-center gap-2 rounded-lg bg-sub/10 px-5 text-xs font-bold text-sub transition-colors hover:bg-main hover:text-bg"
 				onclick={(e) => {
 					e.stopPropagation();
 					showMap = true;
