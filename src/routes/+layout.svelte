@@ -4,7 +4,7 @@
 	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { User, LogOut, BookOpen, Info, Palette, BarChart2 } from 'lucide-svelte';
+	import { User, LogOut, BookOpen, Info, Palette, BarChart2, ChevronDown } from 'lucide-svelte';
 
 	import { supabase } from '$lib/supabase';
 	import { currentTheme, applyThemeToRoot } from '$lib/themeStore.svelte';
@@ -20,6 +20,9 @@
 	let showZenUI = $derived(zenMode.value && isHomePage);
 
 	let currentUser: string | null = $state(null);
+	let showAccount = $state(false);
+	let accountMenu = $state<HTMLDivElement>();
+	let accountTrigger = $state<HTMLButtonElement>();
 	let showPalette = $state(false);
 	setContext('openCommandPalette', () => (showPalette = true));
 	let lastKey = '';
@@ -37,6 +40,13 @@
 	}
 
 	function handleGlobalKeydown(e: KeyboardEvent) {
+		if (showAccount && e.key === 'Escape') {
+			e.preventDefault();
+			showAccount = false;
+			accountTrigger?.focus();
+			return;
+		}
+
 		// ZZ and ZQ Logic
 		if (e.shiftKey && !showPalette) {
 			const now = Date.now();
@@ -107,6 +117,10 @@
 		applyThemeToRoot(currentTheme.value);
 	});
 
+	$effect(() => {
+		if (showZenUI || !currentUser) showAccount = false;
+	});
+
 	onMount(() => {
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (session?.user) {
@@ -126,12 +140,36 @@
 	});
 
 	async function handleLogout() {
+		showAccount = false;
 		await supabase.auth.signOut();
 		currentUser = null;
 	}
 </script>
 
-<svelte:window onkeydown={handleGlobalKeydown} />
+<svelte:window
+	onkeydown={handleGlobalKeydown}
+	onkeydowncapture={(event) => {
+		if (showAccount && event.key === 'Escape') {
+			handleGlobalKeydown(event);
+			event.stopImmediatePropagation();
+			return;
+		}
+		if (!(event.target instanceof Element) || !event.target.closest('header')) return;
+		if (
+			event.key === 'Tab' ||
+			event.key === 'Enter' ||
+			(event.key === ' ' && event.target.closest('button'))
+		) {
+			event.stopImmediatePropagation();
+		}
+	}}
+	onpointerdown={(event) => {
+		if (!accountMenu?.contains(event.target as Node)) showAccount = false;
+	}}
+	onfocusin={(event) => {
+		if (!accountMenu?.contains(event.target as Node)) showAccount = false;
+	}}
+/>
 
 <svelte:head>
 	<title>Zsweep</title>
@@ -153,9 +191,11 @@
 		<div class="flex items-center gap-3 sm:gap-5">
 			<a
 				href={resolve('/')}
-				class="group flex select-none items-center gap-2 transition-opacity hover:opacity-80 sm:gap-3"
+				aria-label="Zsweep home"
+				class="group flex h-9 select-none items-center gap-2 rounded-lg transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main sm:gap-3"
 			>
 				<svg
+					aria-hidden="true"
 					class="h-7 w-7 fill-current text-main transition-transform group-hover:rotate-12 sm:h-8 sm:w-8"
 					viewBox="0 0 1001 1023"
 					version="1.1"
@@ -174,103 +214,116 @@
 						</g>
 					</g>
 				</svg>
-				<div class="flex flex-col">
+				<div class="hidden min-[360px]:block">
 					<h1 class="text-2xl font-black leading-none tracking-tighter text-text sm:text-3xl">
 						z<span class="text-main">sweep</span>
 					</h1>
 				</div>
 			</a>
 
-			<nav class="flex items-center gap-1 sm:gap-1.5">
+			<nav aria-label="Main navigation" class="flex items-center gap-1 sm:gap-2">
 				<a
 					href={resolve('/about')}
-					class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text sm:h-9 sm:w-9 {$page
-						.url.pathname === '/about'
+					class="header-control w-9 {$page.url.pathname === '/about'
 						? 'bg-sub/10 text-main'
-						: 'text-sub'}"
+						: 'text-text/70'}"
 					title="About & Global Stats"
+					aria-label="About & Global Stats"
+					aria-current={$page.url.pathname === '/about' ? 'page' : undefined}
 				>
-					<Info size={19} />
+					<Info size={18} aria-hidden="true" />
 				</a>
 
 				<a
 					href={resolve('/help')}
-					class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text sm:h-9 sm:w-9 {$page
-						.url.pathname === '/help'
+					class="header-control w-9 {$page.url.pathname === '/help'
 						? 'bg-sub/10 text-main'
-						: 'text-sub'}"
+						: 'text-text/70'}"
 					title="Manual / Vim Guide"
+					aria-label="Manual / Vim Guide"
+					aria-current={$page.url.pathname === '/help' ? 'page' : undefined}
 				>
-					<BookOpen size={19} />
+					<BookOpen size={18} aria-hidden="true" />
 				</a>
 
 				<a
 					href={resolve('/profile')}
-					class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-sub/10 hover:text-text sm:h-9 sm:w-9 {$page
-						.url.pathname === '/profile'
+					class="header-control w-9 {$page.url.pathname === '/profile'
 						? 'bg-sub/10 text-main'
-						: 'text-sub'}"
+						: 'text-text/70'}"
 					title="Dashboard & Personal Bests"
+					aria-label="Dashboard & Personal Bests"
+					aria-current={$page.url.pathname === '/profile' ? 'page' : undefined}
 				>
-					<BarChart2 size={19} />
+					<BarChart2 size={18} aria-hidden="true" />
 				</a>
 			</nav>
 		</div>
 
-		<div class="flex items-center gap-1 text-sm transition-opacity duration-300 sm:gap-4">
+		<div class="flex min-w-0 items-center gap-1 text-sm sm:gap-2">
 			<button
-				class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-sub transition-colors hover:bg-sub/10 hover:text-main"
+				class="header-control header-action text-text/70 sm:max-w-[10rem]"
 				onclick={() => (showPalette = true)}
-				title="Choose theme"
+				aria-label="Choose theme: {currentTheme.value?.label || 'default'}"
 			>
-				<Palette size={16} />
-				<span class="hidden sm:inline">{currentTheme.value?.label || 'default'}</span>
+				<Palette size={18} class="shrink-0 text-main" aria-hidden="true" />
+				<span class="hidden truncate sm:inline">{currentTheme.value?.label || 'default'}</span>
 			</button>
 			{#if currentUser}
-				<div class="group relative z-20">
-					<a
-						href={resolve('/profile')}
-						title="Go to Dashboard"
-						class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sub transition-all hover:bg-sub/10 hover:text-text {$page
-							.url.pathname === '/profile'
-							? 'text-main'
+				<div bind:this={accountMenu} class="relative z-20 min-w-0">
+					<button
+						bind:this={accountTrigger}
+						onclick={() => (showAccount = !showAccount)}
+						aria-expanded={showAccount}
+						aria-controls="account-dropdown"
+						aria-label="Account: {currentUser}"
+						class="header-control header-action text-text sm:max-w-[8rem] md:max-w-[14rem] {showAccount
+							? 'bg-sub/10'
 							: ''}"
 					>
-						<User size={16} class="text-main" />
-						<span class="font-bold">{currentUser}</span>
-					</a>
+						<User size={18} class="shrink-0 text-main" aria-hidden="true" />
+						<span class="hidden truncate font-medium sm:inline">{currentUser}</span>
+						<ChevronDown
+							size={12}
+							class="hidden shrink-0 text-text/60 sm:block {showAccount ? 'rotate-180' : ''}"
+							aria-hidden="true"
+						/>
+					</button>
 					<div
-						class="invisible absolute right-0 top-full pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100"
+						id="account-dropdown"
+						hidden={!showAccount}
+						class="absolute right-0 top-full mt-2 w-44 rounded-xl border border-sub/20 p-1.5 text-xs shadow-lg shadow-black/20"
+						style="background: color-mix(in srgb, rgb(var(--bg)), rgb(var(--text)) 4%);"
 					>
-						<div
-							class="flex min-w-[160px] flex-col rounded-lg border border-sub/20 bg-bg p-1 font-mono text-xs shadow-xl"
+						<a
+							href={resolve('/profile')}
+							onclick={() => (showAccount = false)}
+							aria-current={$page.url.pathname === '/profile' ? 'page' : undefined}
+							class="flex h-10 items-center gap-2.5 rounded-md px-3 text-text transition-colors hover:bg-sub/10 focus-visible:bg-sub/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-main"
 						>
-							<a
-								href={resolve('/profile')}
-								class="flex items-center gap-2 rounded px-3 py-2 text-sub transition-colors hover:bg-sub/10 hover:text-text"
-							>
-								<BarChart2 size={14} /><span>dashboard</span>
-							</a>
-							<div class="my-1 h-[1px] bg-sub/10"></div>
-							<button
-								onclick={handleLogout}
-								class="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sub transition-colors hover:bg-error/10 hover:text-error"
-							>
-								<LogOut size={14} /><span>sign out</span>
-							</button>
-						</div>
+							<BarChart2 size={15} class="text-main" aria-hidden="true" />
+							<span>dashboard</span>
+						</a>
+						<div class="mx-3 my-1 h-px bg-sub/15"></div>
+						<button
+							onclick={handleLogout}
+							class="flex h-10 w-full items-center gap-2.5 rounded-md px-3 text-left text-text/75 transition-colors hover:bg-error/10 hover:text-error focus-visible:bg-error/10 focus-visible:text-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-error"
+						>
+							<LogOut size={15} aria-hidden="true" /><span>sign out</span>
+						</button>
 					</div>
 				</div>
 			{:else}
 				<a
 					href={resolve('/login')}
-					class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-bold text-sub transition-colors hover:bg-sub/10 hover:text-text sm:px-3 {$page
-						.url.pathname === '/login'
-						? 'text-main'
-						: ''}"
+					class="header-control header-action {$page.url.pathname === '/login'
+						? 'bg-sub/10 text-main'
+						: 'text-text/70'}"
 					title="Sign In / Register"
+					aria-label="Sign In / Register"
+					aria-current={$page.url.pathname === '/login' ? 'page' : undefined}
 				>
-					<User size={17} />
+					<User size={18} class="text-main" aria-hidden="true" />
 					<span class="hidden sm:inline">login</span>
 				</a>
 			{/if}
@@ -283,3 +336,42 @@
 
 	<CommandPalette bind:show={showPalette} />
 </div>
+
+<style>
+	.header-control {
+		display: flex;
+		height: 2.25rem;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		border-radius: 0.5rem;
+		font-size: 0.75rem;
+		line-height: 1rem;
+		font-weight: 500;
+		transition:
+			color 150ms,
+			background-color 150ms;
+	}
+
+	.header-control:hover {
+		background-color: rgb(var(--sub) / 0.1);
+		color: rgb(var(--text));
+	}
+
+	.header-control:focus-visible {
+		outline: 2px solid rgb(var(--main));
+		outline-offset: 2px;
+	}
+
+	.header-action {
+		width: 2.25rem;
+	}
+
+	@media (min-width: 640px) {
+		.header-action {
+			width: auto;
+			padding-inline: 0.75rem;
+		}
+	}
+</style>
