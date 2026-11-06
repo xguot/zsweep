@@ -23,6 +23,7 @@ export const DIRECTIONS = [
 export type RevealResult = {
 	grid: Cell[][];
 	gameOver: boolean;
+	exploded?: { r: number; c: number };
 };
 
 function inBounds(grid: Cell[][], r: number, c: number): boolean {
@@ -136,7 +137,7 @@ export function revealCell(grid: Cell[][], r: number, c: number): RevealResult {
 
 	if (start.isMine) {
 		start.isOpen = true;
-		return { grid, gameOver: true };
+		return { grid, gameOver: true, exploded: { r, c } };
 	}
 
 	// Iterative flood fill (avoids recursion depth issues)
@@ -178,20 +179,14 @@ export function countFlagsAround(grid: Cell[][], r: number, c: number): number {
 }
 
 export function revealCellsAround(grid: Cell[][], r: number, c: number): RevealResult {
-	let gameOver = false;
-
-	forEachNeighbor(grid, r, c, (nr, nc) => {
-		if (grid[nr][nc].isFlagged) {
-			return;
-		}
-
+	for (const [dr, dc] of DIRECTIONS) {
+		const nr = r + dr;
+		const nc = c + dc;
+		if (!inBounds(grid, nr, nc) || grid[nr][nc].isFlagged) continue;
 		const result = revealCell(grid, nr, nc);
-		if (result.gameOver) {
-			gameOver = true;
-		}
-	});
-
-	return { grid, gameOver };
+		if (result.gameOver) return result;
+	}
+	return { grid, gameOver: false };
 }
 
 export function calculate3BV(grid: Cell[][]): number {
@@ -249,4 +244,44 @@ export function calculate3BV(grid: Cell[][]): number {
 	}
 
 	return threeBV;
+}
+
+/** Count the board's 3BV that has actually been revealed. */
+export function calculateSolved3BV(grid: Cell[][]): number {
+	const rows = grid.length;
+	if (rows === 0 || grid[0].length === 0) return 0;
+	const cols = grid[0].length;
+	const visited = Array.from({ length: rows }, () => Array<boolean>(cols).fill(false));
+	const bordered = Array.from({ length: rows }, () => Array<boolean>(cols).fill(false));
+	let solved = 0;
+
+	for (let r = 0; r < rows; r++) {
+		for (let c = 0; c < cols; c++) {
+			if (grid[r][c].isMine || grid[r][c].neighborCount !== 0 || visited[r][c]) continue;
+			const stack = [{ r, c }];
+			visited[r][c] = true;
+			let opened = false;
+			while (stack.length) {
+				const current = stack.pop()!;
+				if (grid[current.r][current.c].isOpen) opened = true;
+				forEachNeighbor(grid, current.r, current.c, (nr, nc) => {
+					const neighbor = grid[nr][nc];
+					if (neighbor.isMine) return;
+					bordered[nr][nc] = true;
+					if (neighbor.neighborCount === 0 && !visited[nr][nc]) {
+						visited[nr][nc] = true;
+						stack.push({ r: nr, c: nc });
+					}
+				});
+			}
+			if (opened) solved++;
+		}
+	}
+	for (let r = 0; r < rows; r++) {
+		for (let c = 0; c < cols; c++) {
+			const cell = grid[r][c];
+			if (!cell.isMine && cell.neighborCount > 0 && !bordered[r][c] && cell.isOpen) solved++;
+		}
+	}
+	return solved;
 }

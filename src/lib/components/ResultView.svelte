@@ -43,10 +43,10 @@
 	let showMap = $state(false);
 
 	let minesPerMin = $derived(
-		win && totalMines > 0 ? ((totalMines / Math.max(time, 1)) * 60).toFixed(1) : '0.0'
+		win && totalMines > 0 ? ((totalMines / Math.max(time, 0.001)) * 60).toFixed(1) : '0.0'
 	);
 
-	let threeBVPerSec = $derived(threeBV > 0 ? (threeBV / Math.max(time, 1)).toFixed(2) : '0.00');
+	let threeBVPerSec = $derived(threeBV > 0 ? (threeBV / Math.max(time, 0.001)).toFixed(2) : '0.00');
 
 	let consistency = $derived(
 		(() => {
@@ -200,7 +200,7 @@
 		<div class="flex flex-col">
 			<span class="mb-1 text-xs font-bold lowercase text-sub opacity-60">3bv/s</span>
 			<span class="text-2xl font-bold text-main">{threeBVPerSec}</span>
-			<span class="text-[10px] text-sub opacity-50">{threeBV} 3BV</span>
+			<span class="text-[10px] text-sub opacity-50">{threeBV} 3BV solved</span>
 		</div>
 
 		<div class="flex flex-col">
@@ -222,7 +222,7 @@
 
 		<div class="flex flex-col">
 			<span class="mb-1 text-xs font-bold lowercase text-sub opacity-60">time</span>
-			<span class="text-2xl font-bold text-text">{time}s</span>
+			<span class="text-2xl font-bold text-text">{time.toFixed(2)}s</span>
 		</div>
 	</div>
 
