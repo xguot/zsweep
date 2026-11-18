@@ -23,8 +23,11 @@
 		supabase,
 		ensureUserProfile,
 		saveLocalGameResult,
+		setLocalGameResultUser,
 		markLocalGameResultSynced
 	} from '$lib/supabase';
+	import { resolve } from '$app/paths';
+	import { ReplayRecorder } from '$lib/game/recording';
 	import {
 		handleVimKey,
 		calculateVimJump,
@@ -61,11 +64,13 @@
 		grid: [] as Cell[][],
 		minesLeft: 0,
 		timer: 0,
-		startedAt: 0,
 		elapsed: 0,
 		timerInterval: undefined as ReturnType<typeof setInterval> | undefined,
 		isFirstClick: true
 	});
+
+	let recording = new ReplayRecorder(9, 9, 10);
+	let sessionUserId: string | null = null;
 
 	let input = $state({
 		cursor: { r: 0, c: 0 },
@@ -214,10 +219,12 @@
 		game.elapsed = 0;
 		if (game.timerInterval) clearInterval(game.timerInterval);
 
+		recording = new ReplayRecorder(game.size.rows, game.size.cols, game.size.mines);
 		resetBoard();
 	}
 
 	function resetBoard() {
+		recording.nextBoard();
 		game.isFirstClick = true;
 		game.grid = createGrid(game.size.rows, game.size.cols);
 		game.minesLeft = game.size.mines;
@@ -232,14 +239,14 @@
 		input.lastKey = '';
 	}
 
-	function elapsedSeconds() {
-		const elapsed = (performance.now() - game.startedAt) / 1000;
+	function elapsedSeconds(timestamp = recording.elapsed()) {
+		const elapsed = timestamp / 1000;
 		return game.mode === 'time' ? Math.min(elapsed, game.timeLimit) : elapsed;
 	}
 
-	function updateTimer() {
+	function updateTimer(timestamp = recording.elapsed()) {
 		if (game.state !== 'playing') return false;
-		game.elapsed = elapsedSeconds();
+		game.elapsed = elapsedSeconds(timestamp);
 		game.timer =
 			game.mode === 'time' ? Math.ceil(game.timeLimit - game.elapsed) : Math.floor(game.elapsed);
 		if (game.mode === 'time' && game.elapsed >= game.timeLimit) {
@@ -249,8 +256,8 @@
 		return false;
 	}
 
-	function recordAction() {
-		const second = game.state === 'playing' ? Math.floor(elapsedSeconds()) : 0;
+	function recordAction(timestamp: number) {
+		const second = game.state === 'playing' ? Math.floor(elapsedSeconds(timestamp)) : 0;
 		while (stats.history.length <= second) stats.history.push(0);
 		stats.history[second]++;
 		stats.clicks++;
@@ -259,7 +266,6 @@
 	function startSession() {
 		if (game.state === 'playing') return;
 		game.state = 'playing';
-		game.startedAt = performance.now();
 		game.timerInterval = setInterval(updateTimer, 100);
 	}
 
@@ -309,12 +315,12 @@
 	}
 
 	function handleClick(r: number, c: number) {
+		const timestamp = recording.elapsed();
 		if (game.state === 'finished' || game.grid[r][c].isFlagged) return;
-		if (game.state === 'playing' && updateTimer()) return;
+		if (game.state === 'playing' && updateTimer(timestamp)) return;
 
 		if (game.isFirstClick) {
 			game.isFirstClick = false;
-			if (game.state === 'pending') startSession();
 			for (const row of game.grid) {
 				for (const cell of row) {
 					cell.isFlagged = false;
@@ -322,9 +328,12 @@
 			}
 			game.minesLeft = game.size.mines;
 			placeMines(game.grid, game.size.mines, { r, c });
+			recording.startBoard(game.grid);
+			if (game.state === 'pending') startSession();
 		}
+		recording.record('reveal', r, c, timestamp);
 
-		recordAction();
+		recordAction(timestamp);
 
 		const canChord =
 			game.grid[r][c].isOpen && countFlagsAround(game.grid, r, c) === game.grid[r][c].neighborCount;
@@ -344,9 +353,13 @@
 	}
 
 	function toggleFlag(r: number, c: number) {
-		if (game.state === 'playing') updateTimer();
+		const timestamp = recording.elapsed();
+		if (game.state === 'playing') updateTimer(timestamp);
 		if (game.state === 'finished' || game.grid[r][c].isOpen) return;
-		if (game.state === 'playing') recordAction();
+		if (game.state === 'playing') {
+			recording.record('flag', r, c, timestamp);
+			recordAction(timestamp);
+		}
 		game.grid[r][c].isFlagged = !game.grid[r][c].isFlagged;
 		game.minesLeft += game.grid[r][c].isFlagged ? -1 : 1;
 		game.grid = [...game.grid];
@@ -688,45 +701,50 @@
 	}
 
 	async function saveResult(win: boolean) {
-		const timeTaken = Math.max(0.001, Math.round(game.elapsed * 1000) / 1000);
-		const totalMinesCleared = stats.gridsSolved * game.size.mines;
-		const settingLabel = game.mode === 'time' ? game.timeLimit.toString() : game.size.label;
-		const gridsCount = game.mode === 'standard' ? (win ? 1 : 0) : stats.gridsSolved;
+		// Snapshot before auth or network calls so restarting cannot change this submission.
+		const replay = recording.finish();
+		const timeTaken = Math.max(0.001, elapsedSeconds(replay.duration_ms));
+		game.elapsed = timeTaken;
 		const result = {
 			mode: game.mode,
-			setting: settingLabel,
+			setting: game.mode === 'time' ? game.timeLimit.toString() : game.size.label,
 			win,
 			time: timeTaken,
-			grids: gridsCount,
-			total_mines: totalMinesCleared,
+			grids: stats.gridsSolved,
+			total_mines: stats.gridsSolved * game.size.mines,
 			accuracy: stats.finalAccuracy,
 			three_bv: stats.threeBV,
-			three_bv_per_sec: parseFloat((stats.threeBV / timeTaken).toFixed(2))
+			three_bv_per_sec: Number((stats.threeBV / timeTaken).toFixed(2))
 		};
 
-		const {
-			data: { session }
-		} = await supabase.auth.getSession();
-
-		// Always persist locally so the dashboard and personal bests work offline and in guest mode
+		// Keep local history available even when auth or submission is unavailable.
 		const localResult = saveLocalGameResult({
 			...result,
-			user_id: session?.user?.id || null,
+			user_id: sessionUserId,
+			replay_version: replay.version,
 			sync_pending: true
 		});
-
-		if (session?.user) {
+		try {
+			const {
+				data: { session }
+			} = await supabase.auth.getSession();
+			sessionUserId = session?.user?.id ?? null;
+			setLocalGameResultUser(localResult.id, sessionUserId);
+			if (!session?.user) return;
 			await ensureUserProfile(session.user);
+			const response = await fetch(resolve('/api/games'), {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					authorization: `Bearer ${session.access_token}`
+				},
+				body: JSON.stringify({ id: localResult.id, result, replay })
+			});
+			if (!response.ok) console.error('Error saving result:', await response.json());
+			else markLocalGameResultSynced(localResult.id);
+		} catch (error) {
+			console.error('Error saving result:', error);
 		}
-
-		const { error } = await supabase.from('game_results').insert({
-			...result,
-			id: localResult.id,
-			created_at: localResult.created_at,
-			user_id: session?.user?.id || null
-		});
-		if (error) console.error('Error saving result:', error);
-		else markLocalGameResultSynced(localResult.id);
 	}
 
 	onDestroy(() => {
@@ -737,6 +755,7 @@
 		const {
 			data: { session }
 		} = await supabase.auth.getSession();
+		sessionUserId = session?.user?.id ?? null;
 		if (session?.user) {
 			ensureUserProfile(session.user);
 		}
