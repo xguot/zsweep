@@ -25,6 +25,7 @@
 		saveLocalGameResult,
 		markLocalGameResultSynced
 	} from '$lib/supabase';
+	import { insertGameResult } from '$lib/gameResultInsert';
 	import {
 		handleVimKey,
 		calculateVimJump,
@@ -719,7 +720,7 @@
 			await ensureUserProfile(session.user);
 		}
 
-		const { error } = await supabase.from('game_results').insert({
+		const { error } = await insertGameResult(supabase, {
 			...result,
 			id: localResult.id,
 			created_at: localResult.created_at,
